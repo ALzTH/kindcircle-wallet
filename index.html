@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KindCircle Wallet</title>
+<style>
+  :root{--bg:#0b0f16;--card:#141a24;--acc:#4c8dff;--txt:#eaf0fa;--mut:#8a97ad;--in:#3ddc97;--out:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+  .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:12px}
+  h1{font-size:20px;margin:0 0 4px}
+  .mut{color:var(--mut);font-size:13px}
+  .big{font-size:32px;font-weight:700;margin:10px 0 4px}
+  .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}
+  .btn.ghost{background:#1e2634}
+  .addr{font-size:12px;color:var(--mut);word-break:break-all;margin-top:10px}
+  .tx{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #1e2634}
+  .lbl{font-weight:600;font-size:14px}
+  .in{color:var(--in)} .out{color:var(--out)}
+  .amt{white-space:nowrap;font-weight:600;font-size:14px}
+  .foot{color:var(--mut);font-size:11px;text-align:center;padding:18px 4px}
+  .tabbar{display:flex;gap:8px;margin-bottom:12px}
+  .tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:#1e2634;color:var(--mut);font-size:14px;cursor:pointer}
+  .tab.on{background:var(--acc);color:#fff;font-weight:600}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabbar">
+    <div class="tab on" data-t="home">Баланс</div>
+    <div class="tab" data-t="txs">Транзакции</div>
+  </div>
+  <div id="home">
+    <div class="card">
+      <h1>KindCircle Wallet</h1>
+      <div class="mut">Баланс кошелька</div>
+      <div class="big" id="usdt">—</div>
+      <div class="mut" id="ton">—</div>
+      <div class="addr" id="addr"></div>
+      <button class="btn" id="connect">Подключить кошелёк</button>
+      <button class="btn ghost" id="donate">Пополнить счёт</button>
+    </div>
+  </div>
+  <div id="txs" class="hide">
+    <div class="card">
+      <div class="mut">История транзакций</div>
+      <div id="list"><div class="mut">Загрузка…</div></div>
+    </div>
+  </div>
+  <div class="foot">
+    Не является инвестиционной рекомендацией. Мы не храним ваши средства и не имеем доступа к вашему кошельку. Подключение — только через TON Connect.
+  </div>
+</div>
+<script src="https://cdn.tonconnect.org/tonconnect.js"></script>
+<script>
+const CONFIG = {
+  address: "UQD5KTOirYPOhn1FKMc8uK-RFxEZ199H201CV4wtO01e2uS1",
+  usdtJetton: "EQCxE6mUtQjkFn8faGvuuLd8wJ8u4NZtpZ_GAd0bVeeSG1a",
+  memo: "Оплата KindCircle",
+  api: "https://toncenter.com/api/v3",
+  manifest: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json"
+};
+const $ = s => document.querySelector(s);
+$('#addr').textContent = CONFIG.address;
+let connector = null;
+try { connector = new TonConnect({ manifestUrl: CONFIG.manifest }); } catch(e){}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  ['home','txs'].forEach(id=>document.getElementById(id).classList.toggle('hide', id!==t.dataset.t));
+  if(t.dataset.t==='txs') loadTx();
+});
+$('#connect').onclick = () => { if(connector) connector.openModal(); };
+$('#donate').onclick = () => { location.href = `ton://${CONFIG.address}?text=${encodeURIComponent(CONFIG.memo)}`; };
+async function loadBalance(){
+  try{
+    const b = await fetch(`${CONFIG.api}/addressInformation?address=${encodeURIComponent(CONFIG.address)}`).then(r=>r.json());
+    const ton = Number(b.balance||0)/1e9;
+    $('#ton').textContent = ton.toFixed(4) + ' TON (GRAM)';
+    let usdt = 0;
+    try{
+      const j = await fetch(`${CONFIG.api}/jetton/wallet/${CONFIG.usdtJetton}/balance?owner_address=${encodeURIComponent(CONFIG.address)}`).then(r=>r.json());
+      usdt = Number(j.balance||0)/1e6;
+    }catch(e){}
+    let rate = 0;
+    try{
+      const p = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd").then(r=>r.json());
+      rate = (p["the-open-network"]||{}).usd || 0;
+    }catch(e){}
+    $('#usdt').textContent = '$' + (usdt + ton*rate).toFixed(2);
+  }catch(e){ $('#ton').textContent = 'Не удалось загрузить баланс'; }
+}
+async function loadTx(){
+  const box = $('#list'); box.innerHTML = '<div class="mut">Загрузка…</div>';
+  try{
+    const r = await fetch(`${CONFIG.api}/transactions?account=${encodeURIComponent(CONFIG.address)}&limit=30`).then(r=>r.json());
+    const txs = r.transactions || [];
+    if(!txs.length){ box.innerHTML='<div class="mut">Транзакций пока нет</div>'; return; }
+    box.innerHTML='';
+    txs.forEach(t=>{
+      const inc = !!t.in_msg;
+      const val = t.value ? (Number(t.value)/1e9).toFixed(4) : '0';
+      const el = document.createElement('div'); el.className='tx';
+      el.innerHTML = '<div><div class="lbl '+(inc?'in':'out')+'">'+(inc?'▼ Приход':'▲ Расход')+'</div>'
+        + '<div class="mut">'+new Date(t.utime*1000).toLocaleString('ru-RU')+'</div>'
+        + (t.comment?'<div class="mut">'+t.comment+'</div>':'')+'</div>'
+        + '<div class="amt">'+val+' TON</div>';
+      box.appendChild(el);
+    });
+  }catch(e){ box.innerHTML='<div class="mut">Ошибка загрузки истории</div>'; }
+}
+loadBalance();
+setInterval(loadBalance, 60000);
+</script>
+</body>
+</html>
