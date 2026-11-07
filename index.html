@@ -89,54 +89,81 @@
 <script>
 (function(){
 "use strict";
-
+/* ============================================================
+   CONFIG
+   ============================================================ */
 var CONFIG = {
+  /* ✅ Ваш кошелёк-получатель (Telegram Wallet) */
   address: "UQD5KTOirYPOhn1FKMc8uK-RFxEZ199H201CV4wtO01e2uS1",
+
+  /* Контракт USD₮ в сети TON (не меняется) */
   usdtJetton: "EQCxE6mUtQjkFn8faGvuuLd8wJ8u4NZtpZ_GAd0bVeeSG1a",
-  api: "https://toncenter.com/api/v2"
+
+  /* toncenter (без ключа ~1 req/s; бесплатный ключ: @toncenter → /getkey) */
+  toncenter: "https://toncenter.com/api/v2",
+  apiKey: "",
+
+  /* tonapi.io — jetton-балансы и история */
+  tonapi: "https://tonapi.io/v2",
+
+  /* Публичный манифест TON Connect (JSON) */
+  manifestUrl: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json"
 };
+
 var MANIFEST = {
-  url: "https://alzth.github.io/kindcircle-wallet/",
+  url: CONFIG.manifestUrl.replace(/\/tonconnect-manifest\.json$/, "/"),
   name: "KindCircle Wallet",
   iconUrl: "https://alzth.github.io/kindcircle-wallet/icon.png",
   termsOfUseUrl: "https://alzth.github.io/kindcircle-wallet/terms",
   privacyPolicyUrl: "https://alzth.github.io/kindcircle-wallet/privacy"
 };
 
+/* ============================================================
+   УТИЛИТЫ
+   ============================================================ */
 function $(s){ return document.querySelector(s); }
 function el(id){ return document.getElementById(id); }
+
 function b64u(s){
   s = String(s).replace(/-/g,'+').replace(/_/g,'/');
   while(s.length % 4) s += '=';
   return atob(s);
 }
+
 /* friendly -> raw "0:hex" */
 function toRaw(friendly){
   var bin = b64u(friendly), bytes = [];
   for(var i=0;i<bin.length;i++) bytes.push(bin.charCodeAt(i));
   var off, wcIdx;
-  if(bytes[0] === 0x51){ off = 3; wcIdx = 3; }        // non-bounceable (UQ..)
-  else if(bytes[0] === 0x11){ off = 4; wcIdx = 4; }   // bounceable (EQ..)
+  if(bytes[0] === 0x51){ off = 3; wcIdx = 3; }
+  else if(bytes[0] === 0x11){ off = 4; wcIdx = 4; }
   else { off = 0; wcIdx = 0; }
   var wc = bytes[wcIdx] === 0xff ? -1 : bytes[wcIdx];
   var hex = '';
   for(var j=wcIdx+1;j<wcIdx+33;j++) hex += ('0'+bytes[j].toString(16)).slice(-2);
   return wc + ':' + hex;
 }
-function commentPayload(text){
-  if(!text) return '';
-  var bytes = new TextEncoder().encode(text);
-  var out = '00000000';
-  for(var i=0;i<bytes.length;i++) out += ('0'+bytes[i].toString(16)).slice(-2);
-  return '0x'+out;
+
+function hexUtf8(str){
+  var b = new TextEncoder().encode(str), out = '';
+  for(var i=0;i<b.length;i++) out += ('0'+b[i].toString(16)).slice(-2);
+  return out;
 }
 
-var MY_RAW = toRaw(CONFIG.address);
+function commentPayload(text){
+  if(!text) return '';
+  return '0x' + '00000000' + hexUtf8(text);
+}
+
+var MY_RAW  = toRaw(CONFIG.address);
 var USDT_RAW = toRaw(CONFIG.usdtJetton);
 
-el('addr').textContent = CONFIG.address;
+el('addr').textContent  = CONFIG.address;
 el('myaddr').textContent = CONFIG.address;
 
+/* ============================================================
+   TON CONNECT
+   ============================================================ */
 var connector = null, connected = null;
 
 function initTonConnect(){
@@ -151,6 +178,7 @@ function initTonConnect(){
     el('connInfo').innerHTML = '<span class="err">TON Connect не загрузился: '+e.message+'</span>';
   }
 }
+
 function showConnected(a){
   el('connect').style.display = 'none';
   el('disconnect').style.display = 'block';
@@ -161,6 +189,7 @@ function hideConnected(){
   el('disconnect').style.display = 'none';
   el('connInfo').textContent = '';
 }
+
 el('connect').onclick = function(){
   if(!connector){ el('connInfo').innerHTML='<span class="err">TON Connect недоступен</span>'; return; }
   try{ connector.openModal(); }
@@ -168,6 +197,7 @@ el('connect').onclick = function(){
 };
 el('disconnect').onclick = function(){ if(connector) connector.disconnect(); };
 
+/* Табы */
 document.querySelectorAll('.tab').forEach(function(t){
   t.onclick = function(){
     document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
@@ -176,17 +206,25 @@ document.querySelectorAll('.tab').forEach(function(t){
     if(t.dataset.t === 'txs') loadTx();
   };
 });
-
+/* ============================================================
+   ОТПРАВКА
+   ============================================================ */
 el('pay').onclick = function(){
   var info = el('payInfo');
   if(!connected){ info.innerHTML = '<span class="err">Сначала подключите кошелёк</span>'; return; }
   var amt = parseFloat(el('amount').value);
   if(!amt || amt <= 0){ info.innerHTML = '<span class="err">Введите сумму</span>'; return; }
+
   var validUntil = Math.floor(Date.now()/1000) + 300;
   var msg;
+
   if(el('asset').value === 'ton'){
     var nano = BigInt(Math.round(amt * 1e9));
-    msg = { address: MY_RAW, amount: nano.toString(), payload: commentPayload(el('comment').value.trim()) };
+    msg = {
+      address: MY_RAW,
+      amount: nano.toString(),
+      payload: commentPayload(el('comment').value.trim())
+    };
   } else {
     var units = BigInt(Math.round(amt * 1e6));
     var body = {
@@ -200,6 +238,8 @@ el('pay').onclick = function(){
     };
     msg = { address: MY_RAW, amount: '50000000', payload: '0x' + hexUtf8(JSON.stringify(body)) };
   }
+
+  el('pay').disabled = true;
   connector.sendTransaction({ validUntil: validUntil, messages: [msg] })
     .then(function(res){
       info.innerHTML = '✅ Отправлено! <span class="ok">'+(res.boc||'').slice(0,24)+'…</span>';
@@ -207,86 +247,105 @@ el('pay').onclick = function(){
     })
     .catch(function(e){
       info.innerHTML = '<span class="err">'+(e && e.message ? e.message : 'Пользователь отклонил транзакцию')+'</span>';
-    });
+    })
+    .finally(function(){ el('pay').disabled = false; });
 };
-function hexUtf8(str){
-  var b = new TextEncoder().encode(str), out = '';
-  for(var i=0;i<b.length;i++) out += ('0'+b[i].toString(16)).slice(-2);
-  return out;
+
+/* ============================================================
+   КУРС TON
+   ============================================================ */
+var tonRate = 0;
+function loadRate(){
+  return fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
+    .then(function(r){ return r.json(); })
+    .then(function(p){
+      tonRate = (p['the-open-network']  {}).usd  0;
+      return tonRate;
+    })
+    .catch(function(){ tonRate = 0; return 0; });
 }
 
-function setRate(r){
-  var el2 = document.createElement('script');
-  el2.src = 'https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd';
-  el2.onload = function(){
-    try{
-      var p = JSON.parse(el2.dataset.x || '{}');
-    }catch(e){}
-  };
-  fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
-    .then(function(r){ return r.json(); })
-    .then(function(p){ window.__tonRate = (p['the-open-network']||{}).usd || 0; })
-    .catch(function(){ window.__tonRate = 0; });
+/* ============================================================
+   БАЛАНС
+   ============================================================ */
+function tcUrl(path){
+  var u = CONFIG.toncenter + path;
+  return CONFIG.apiKey ? u + (u.indexOf('?')>=0?'&':'?') + 'api_key=' + encodeURIComponent(CONFIG.apiKey) : u;
 }
-setRate();
 
 function loadBalance(){
-  fetch(CONFIG.api + '/getAddressInformation?address=' + encodeURIComponent(CONFIG.address))
-    .then(function(r){ return r.json(); })
+  fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(d){
-      var ton = Number(d.balance || 0) / 1e9;
+      var nano = (d && d.result && d.result.balance)  d.balance  0;
+      var ton  = Number(nano) / 1e9;
       el('ton').textContent = ton.toFixed(4) + ' TON (GRAM)';
-      var rate = window.__tonRate || 0;
-      el('usdt').textContent = '$' + (ton * rate).toFixed(2);
-      el('usdtRaw').textContent = rate ? 'Курс TON: $' + rate.toFixed(3) : 'Курс TON: —';
-      return fetch('https://tonapi.io/v2/accounts/' + encodeURIComponent(CONFIG.address) + '/jettons');
+      return ton;
     })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(j){
-      if(!j) { el('usdtRaw').textContent += ' · USD₮: 0'; return; }
-      var total = 0;
-      (j.balances||[]).forEach(function(b){
-        if(String(b.jetton && b.jetton.symbol || '').toUpperCase().indexOf('USD') === 0){
-          var dec = (b.jetton && b.jetton.decimals) || 6;
-          total += Number(b.balance_raw||0) / Math.pow(10, dec);
-        }
-      });
-      var ton = parseFloat(el('ton').textContent) || 0;
-      var rate = window.__tonRate || 0;
-      el('usdtRaw').textContent = 'USD₮: ' + total.toFixed(2) + (rate ? ' · Курс TON: $' + rate.toFixed(3) : '');
-      el('usdt').textContent = '$' + (total + ton * rate).toFixed(2);
+    .then(function(ton){
+      return fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/jettons')
+        .then(function(r){ return r.ok ? r.json() : { balances: [] }; })
+        .then(function(j){
+          var totalUsdt = 0;
+          (j.balances || []).forEach(function(b){
+            var sym = String((b.jetton && b.jetton.symbol) || '').toUpperCase();
+            if(sym === 'USDT' || sym.indexOf('USD') === 0){
+              var dec = (b.jetton && b.jetton.decimals) || 6;
+              totalUsdt += Number(b.balance  b.balance_raw  0) / Math.pow(10, dec);
+            }
+          });
+          return { ton: ton, usdt: totalUsdt };
+        });
     })
-    .catch(function(){
-      el('ton').textContent = 'Не удалось загрузить баланс (проверь адрес)';
+    .then(function(res){
+      var usdValue = res.usdt + res.ton * tonRate;
+      el('usdt').textContent = '$' + usdValue.toFixed(2);
+      el('usdtRaw').textContent = 'USD₮: ' + res.usdt.toFixed(2)
+        + (tonRate ? ' · Курс TON: $' + tonRate.toFixed(3) : ' · Курс TON: —');
+    })
+    .catch(function(err){
+      el('ton').textContent = 'Не удалось загрузить баланс: ' + err.message;
     });
 }
-
+/* ============================================================
+   ИСТОРИЯ ТРАНЗАКЦИЙ
+   ============================================================ */
 function loadTx(){
   var box = el('list');
   box.innerHTML = '<div class="mut">Загрузка…</div>';
-  fetch('https://tonapi.io/v2/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=30')
-    .then(function(r){ return r.json(); })
+  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=30')
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(d){
       var txs = d.transactions || [];
       if(!txs.length){ box.innerHTML = '<div class="mut">Транзакций пока нет</div>'; return; }
       box.innerHTML = '';
       txs.forEach(function(t){
-        var inc = Number(t.in_msg || 0) > 0;
-        var val = (Number(t.value||0)/1e9).toFixed(4);
+        var inc = !!t.in_msg;
+        var val = ((Number(t.in_msg && t.in_msg.value) || 0) / 1e9).toFixed(4);
         var d2 = document.createElement('div');
         d2.className = 'tx';
-        d2.innerHTML = '<div><div class="lbl '+(inc?'in':'out')+'">'+(inc?'▼ Приход':'▲ Расход')+'</div>'
-          + '<div class="mut">'+new Date(t.timestamp*1000).toLocaleString('ru-RU')+'</div></div>'
-          + '<div class="amt">'+val+' TON</div>';
+        d2.innerHTML =
+          '<div><div class="lbl '+(inc?'in':'out')+'">'+(inc?'▼ Приход':'▲ Расход')+'</div>'
+          + '<div class="mut">'+new Date(t.utime*1000).toLocaleString('ru-RU')+'</div></div>'
+          + '<div class="amt">'+(inc?'+':'-')+val+' TON</div>';
         box.appendChild(d2);
       });
     })
-    .catch(function(){ box.innerHTML = '<div class="mut">Ошибка загрузки истории</div>'; });
+    .catch(function(err){ box.innerHTML = '<div class="mut">Ошибка загрузки истории: '+err.message+'</div>'; });
 }
 
+/* ============================================================
+   СТАРТ
+   ============================================================ */
 initTonConnect();
-loadBalance();
-setInterval(loadBalance, 60000);
+loadRate().then(loadBalance);
+setInterval(function(){ loadRate().then(loadBalance); }, 60000);
 })();
 </script>
 </body>
