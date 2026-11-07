@@ -15,7 +15,12 @@
   .big{font-size:32px;font-weight:700;margin:10px 0 4px}
   .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}
   .btn.ghost{background:#1e2634}
+  .btn.ok{background:var(--in);color:#062}
   .addr{font-size:12px;color:var(--mut);word-break:break-all;margin-top:10px}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  label{display:block;font-size:13px;color:var(--mut);margin:12px 0 6px}
+  input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #26303f;background:#0e131c;color:var(--txt);font-size:15px}
   .tx{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #1e2634}
   .lbl{font-weight:600;font-size:14px}
   .in{color:var(--in)} .out{color:var(--out)}
@@ -25,56 +30,160 @@
   .tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:#1e2634;color:var(--mut);font-size:14px;cursor:pointer}
   .tab.on{background:var(--acc);color:#fff;font-weight:600}
   .hide{display:none}
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;background:#1e2634;color:var(--mut);font-size:12px}
+  .ok{color:var(--in)} .err{color:var(--out)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="tabbar">
     <div class="tab on" data-t="home">Баланс</div>
+    <div class="tab" data-t="send">Отправить</div>
     <div class="tab" data-t="txs">Транзакции</div>
   </div>
+
   <div id="home">
     <div class="card">
       <h1>KindCircle Wallet</h1>
-      <div class="mut">Баланс кошелька</div>
+      <div class="mut">Баланс кошелька проекта</div>
       <div class="big" id="usdt">—</div>
       <div class="mut" id="ton">—</div>
       <div class="addr" id="addr"></div>
       <button class="btn" id="connect">Подключить кошелёк</button>
-      <button class="btn ghost" id="donate">Пополнить счёт</button>
+      <button class="btn ghost" id="disconnect" style="display:none">Отключить</button>
+      <div class="mut" id="connInfo" style="margin-top:10px"></div>
     </div>
   </div>
+
+  <div id="send" class="hide">
+    <div class="card">
+      <h1>Отправить</h1>
+      <div class="mut">Получатель — кошелёк KindCircle</div>
+      <div class="addr" id="myaddr"></div>
+      <label>Актив</label>
+      <select id="asset">
+        <option value="ton">TON (GRAM)</option>
+        <option value="usdt">USD₮ (USDT)</option>
+      </select>
+      <label>Сумма</label>
+      <input id="amount" type="number" step="0.0001" min="0" placeholder="0.0" inputmode="decimal">
+      <label>Комментарий (необязательно)</label>
+      <input id="comment" type="text" placeholder="Оплата KindCircle" maxlength="64">
+      <button class="btn" id="pay">Подтвердить в кошельке</button>
+      <div class="mut" id="payInfo" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <div id="txs" class="hide">
     <div class="card">
-      <div class="mut">История транзакций</div>
+      <div class="mut">История транзакций кошелька проекта</div>
       <div id="list"><div class="mut">Загрузка…</div></div>
     </div>
   </div>
+
   <div class="foot">
-    Не является инвестиционной рекомендацией. Мы не храним ваши средства и не имеем доступа к вашему кошельку. Подключение — только через TON Connect.
+    Не является инвестиционной рекомендацией. Мы не храним ваши средства и не имеем доступа к вашему кошельку.
+    Подключение и платежи — только через TON Connect.
   </div>
 </div>
+
 <script src="https://cdn.tonconnect.org/tonconnect.js"></script>
-<script>
+<script type="module">
+import { Address } from 'https://esm.sh/@ton/core@0.61.0';
+
 const CONFIG = {
   address: "UQD5KTOirYPOhn1FKMc8uK-RFxEZ199H201CV4wtO01e2uS1",
   usdtJetton: "EQCxE6mUtQjkFn8faGvuuLd8wJ8u4NZtpZ_GAd0bVeeSG1a",
-  memo: "Оплата KindCircle",
   api: "https://toncenter.com/api/v3",
   manifest: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json"
 };
 const $ = s => document.querySelector(s);
+const raw = a => Address.parse(a).toString({bounceable:true, testOnly:false});
+const hex = n => '0x'+ BigInt(n).toString(16);
+
 $('#addr').textContent = CONFIG.address;
-let connector = null;
-try { connector = new TonConnect({ manifestUrl: CONFIG.manifest }); } catch(e){}
+$('#myaddr').textContent = CONFIG.address;
+const MY_RAW = raw(CONFIG.address);
+const USDT_RAW = raw(CONFIG.usdtJetton);
+
+let connector, myWallet = null, connected = null;
+
+try {
+  connector = new TonConnect({ manifestUrl: CONFIG.manifest });
+} catch(e) { console.error(e); }
+
+connector.onStatusChange(w => {
+  if (w.account) { connected = w.account; showConnected(w); }
+  else { connected = null; hideConnected(); }
+});
+connector.onDisconnect(() => { connected = null; hideConnected(); });
+
+function showConnected(w){
+  $('#connect').style.display='none';
+  $('#disconnect').style.display='block';
+  $('#connInfo').innerHTML = '✅ Подключён: <span class="ok">'+w.account.address+'</span>';
+}
+function hideConnected(){
+  $('#connect').style.display='block';
+  $('#disconnect').style.display='none';
+  $('#connInfo').textContent='';
+}
+
+$('#connect').onclick = () => connector.openModal();
+$('#disconnect').onclick = () => connector.disconnect();
+
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   t.classList.add('on');
-  ['home','txs'].forEach(id=>document.getElementById(id).classList.toggle('hide', id!==t.dataset.t));
+  ['home','send','txs'].forEach(id=>document.getElementById(id).classList.toggle('hide', id!==t.dataset.t));
   if(t.dataset.t==='txs') loadTx();
 });
-$('#connect').onclick = () => { if(connector) connector.openModal(); };
-$('#donate').onclick = () => { location.href = `ton://${CONFIG.address}?text=${encodeURIComponent(CONFIG.memo)}`; };
+
+/* ---------- Отправка ---------- */
+$('#pay').onclick = async () => {
+  const info = $('#payInfo');
+  if(!connected){ info.innerHTML='<span class="err">Сначала подключите кошелёк</span>'; return; }
+  const amt = parseFloat($('#amount').value);
+  if(!amt || amt<=0){ info.innerHTML='<span class="err">Введите сумму</span>'; return; }
+  const comment = $('#comment').value.trim();
+  const asset = $('#asset').value;
+
+  const validUntil = Math.floor(Date.now()/1000) + 300;
+  let msg;
+
+  if(asset === 'ton'){
+    const nanotons = BigInt(Math.round(amt * 1e9));
+    const payload = comment
+      ? '0x' + '00000000' + [...new TextEncoder().encode(comment)].map(b=>b.toString(16).padStart(2,'0')).join('')
+      : '';
+    msg = { address: MY_RAW, amount: nanotons.toString(), payload };
+  } else {
+    const units = BigInt(Math.round(amt * 1e6));           // USD₮ — 6 знаков
+    msg = {
+      address: MY_RAW,
+      amount: '50000000',                                   // ~0.05 TON на комиссию
+      payload: '0' + Buffer.from(JSON.stringify({
+        type:'jettonTransfer',
+        jetton: USDT_RAW,
+        amount: units.toString(),
+        to: MY_RAW,
+        responseAddress: raw(connected.address),
+        forwardTonAmount: '1',
+        forwardPayload: '0x'
+      })).toString('hex')
+    };
+  }
+
+  try{
+    const res = await connector.sendTransaction({ validUntil, messages:[msg] });
+    info.innerHTML = '✅ Отправлено! <span class="ok">'+res.boc.slice(0,24)+'…</span>';
+    setTimeout(loadTx, 1500);
+  }catch(e){
+    info.innerHTML = '<span class="err">'+ (e?.message || 'Пользователь отклонил транзакцию') +'</span>';
+  }
+};
+
+/* ---------- Баланс проекта ---------- */
 async function loadBalance(){
   try{
     const b = await fetch(`${CONFIG.api}/addressInformation?address=${encodeURIComponent(CONFIG.address)}`).then(r=>r.json());
@@ -93,8 +202,10 @@ async function loadBalance(){
     $('#usdt').textContent = '$' + (usdt + ton*rate).toFixed(2);
   }catch(e){ $('#ton').textContent = 'Не удалось загрузить баланс'; }
 }
+
+/* ---------- История ---------- */
 async function loadTx(){
-  const box = $('#list'); box.innerHTML = '<div class="mut">Загрузка…</div>';
+  const box = $('#list'); box.innerHTML='<div class="mut">Загрузка…</div>';
   try{
     const r = await fetch(`${CONFIG.api}/transactions?account=${encodeURIComponent(CONFIG.address)}&limit=30`).then(r=>r.json());
     const txs = r.transactions || [];
@@ -112,6 +223,7 @@ async function loadTx(){
     });
   }catch(e){ box.innerHTML='<div class="mut">Ошибка загрузки истории</div>'; }
 }
+
 loadBalance();
 setInterval(loadBalance, 60000);
 </script>
