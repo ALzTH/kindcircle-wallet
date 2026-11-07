@@ -15,10 +15,7 @@
   .big{font-size:32px;font-weight:700;margin:10px 0 4px}
   .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}
   .btn.ghost{background:#1e2634}
-  .btn:disabled{opacity:.5}
   .addr{font-size:12px;color:var(--mut);word-break:break-all;margin-top:10px}
-  label{display:block;font-size:13px;color:var(--mut);margin:12px 0 6px}
-  input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #26303f;background:#0e131c;color:var(--txt);font-size:15px}
   .tx{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #1e2634}
   .lbl{font-weight:600;font-size:14px}
   .in{color:var(--in)} .out{color:var(--out)}
@@ -28,325 +25,95 @@
   .tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:#1e2634;color:var(--mut);font-size:14px;cursor:pointer}
   .tab.on{background:var(--acc);color:#fff;font-weight:600}
   .hide{display:none}
-  .ok{color:var(--in)} .err{color:var(--out)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="tabbar">
     <div class="tab on" data-t="home">Баланс</div>
-    <div class="tab" data-t="send">Отправить</div>
     <div class="tab" data-t="txs">Транзакции</div>
   </div>
-
   <div id="home">
     <div class="card">
       <h1>KindCircle Wallet</h1>
-      <div class="mut">Баланс кошелька проекта</div>
+      <div class="mut">Баланс кошелька</div>
       <div class="big" id="usdt">—</div>
       <div class="mut" id="ton">—</div>
-      <div class="mut" id="usdtRaw">—</div>
       <div class="addr" id="addr"></div>
       <button class="btn" id="connect">Подключить кошелёк</button>
-      <button class="btn ghost" id="disconnect" style="display:none">Отключить</button>
-      <div class="mut" id="connInfo" style="margin-top:10px"></div>
+      <button class="btn ghost" id="donate">Пополнить счёт</button>
     </div>
   </div>
-
-  <div id="send" class="hide">
-    <div class="card">
-      <h1>Отправить</h1>
-      <div class="mut">Получатель — кошелёк KindCircle</div>
-      <div class="addr" id="myaddr"></div>
-      <label>Актив</label>
-      <select id="asset">
-        <option value="ton">TON (GRAM)</option>
-        <option value="usdt">USD₮ (USDT)</option>
-      </select>
-      <label>Сумма</label>
-      <input id="amount" type="number" step="0.0001" min="0" placeholder="0.0" inputmode="decimal">
-      <label>Комментарий (необязательно)</label>
-      <input id="comment" type="text" placeholder="Оплата KindCircle" maxlength="64">
-      <button class="btn" id="pay">Подтвердить в кошельке</button>
-      <div class="mut" id="payInfo" style="margin-top:10px"></div>
-    </div>
-  </div>
-
   <div id="txs" class="hide">
     <div class="card">
-      <div class="mut">История транзакций кошелька проекта</div>
+      <div class="mut">История транзакций</div>
       <div id="list"><div class="mut">Загрузка…</div></div>
     </div>
   </div>
-
   <div class="foot">
-    Не является инвестиционной рекомендацией. Мы не храним ваши средства и не имеем доступа к вашему кошельку.
-    Подключение и платежи — только через TON Connect.
+    Не является инвестиционной рекомендацией. Мы не храним ваши средства и не имеем доступа к вашему кошельку. Подключение — только через TON Connect.
   </div>
 </div>
-
 <script src="https://cdn.tonconnect.org/tonconnect.js"></script>
 <script>
-(function(){
-"use strict";
-/* ============================================================
-   CONFIG
-   ============================================================ */
-var CONFIG = {
-  /* ✅ Ваш кошелёк-получатель (Telegram Wallet) */
+const CONFIG = {
   address: "UQD5KTOirYPOhn1FKMc8uK-RFxEZ199H201CV4wtO01e2uS1",
-
-  /* Контракт USD₮ в сети TON (не меняется) */
   usdtJetton: "EQCxE6mUtQjkFn8faGvuuLd8wJ8u4NZtpZ_GAd0bVeeSG1a",
-
-  /* toncenter (без ключа ~1 req/s; бесплатный ключ: @toncenter → /getkey) */
-  toncenter: "https://toncenter.com/api/v2",
-  apiKey: "",
-
-  /* tonapi.io — jetton-балансы и история */
-  tonapi: "https://tonapi.io/v2",
-
-  /* Публичный манифест TON Connect (JSON) */
-  manifestUrl: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json"
+  memo: "Оплата KindCircle",
+  api: "https://toncenter.com/api/v3",
+  manifest: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json"
 };
-
-var MANIFEST = {
-  url: CONFIG.manifestUrl.replace(/\/tonconnect-manifest\.json$/, "/"),
-  name: "KindCircle Wallet",
-  iconUrl: "https://alzth.github.io/kindcircle-wallet/icon.png",
-  termsOfUseUrl: "https://alzth.github.io/kindcircle-wallet/terms",
-  privacyPolicyUrl: "https://alzth.github.io/kindcircle-wallet/privacy"
-};
-
-/* ============================================================
-   УТИЛИТЫ
-   ============================================================ */
-function $(s){ return document.querySelector(s); }
-function el(id){ return document.getElementById(id); }
-
-function b64u(s){
-  s = String(s).replace(/-/g,'+').replace(/_/g,'/');
-  while(s.length % 4) s += '=';
-  return atob(s);
-}
-
-/* friendly -> raw "0:hex" */
-function toRaw(friendly){
-  var bin = b64u(friendly), bytes = [];
-  for(var i=0;i<bin.length;i++) bytes.push(bin.charCodeAt(i));
-  var off, wcIdx;
-  if(bytes[0] === 0x51){ off = 3; wcIdx = 3; }
-  else if(bytes[0] === 0x11){ off = 4; wcIdx = 4; }
-  else { off = 0; wcIdx = 0; }
-  var wc = bytes[wcIdx] === 0xff ? -1 : bytes[wcIdx];
-  var hex = '';
-  for(var j=wcIdx+1;j<wcIdx+33;j++) hex += ('0'+bytes[j].toString(16)).slice(-2);
-  return wc + ':' + hex;
-}
-
-function hexUtf8(str){
-  var b = new TextEncoder().encode(str), out = '';
-  for(var i=0;i<b.length;i++) out += ('0'+b[i].toString(16)).slice(-2);
-  return out;
-}
-
-function commentPayload(text){
-  if(!text) return '';
-  return '0x' + '00000000' + hexUtf8(text);
-}
-
-var MY_RAW  = toRaw(CONFIG.address);
-var USDT_RAW = toRaw(CONFIG.usdtJetton);
-
-el('addr').textContent  = CONFIG.address;
-el('myaddr').textContent = CONFIG.address;
-
-/* ============================================================
-   TON CONNECT
-   ============================================================ */
-var connector = null, connected = null;
-
-function initTonConnect(){
-  try{
-    connector = new TonConnect({ manifest: MANIFEST });
-    connector.onStatusChange(function(w){
-      if(w && w.account){ connected = w.account; showConnected(w.account); }
-      else { connected = null; hideConnected(); }
-    });
-    connector.onDisconnect(function(){ connected = null; hideConnected(); });
-  }catch(e){
-    el('connInfo').innerHTML = '<span class="err">TON Connect не загрузился: '+e.message+'</span>';
-  }
-}
-
-function showConnected(a){
-  el('connect').style.display = 'none';
-  el('disconnect').style.display = 'block';
-  el('connInfo').innerHTML = '✅ Подключён: <span class="ok">'+a+'</span>';
-}
-function hideConnected(){
-  el('connect').style.display = 'block';
-  el('disconnect').style.display = 'none';
-  el('connInfo').textContent = '';
-}
-
-el('connect').onclick = function(){
-  if(!connector){ el('connInfo').innerHTML='<span class="err">TON Connect недоступен</span>'; return; }
-  try{ connector.openModal(); }
-  catch(e){ el('connInfo').innerHTML='<span class="err">'+e.message+'</span>'; }
-};
-el('disconnect').onclick = function(){ if(connector) connector.disconnect(); };
-
-/* Табы */
-document.querySelectorAll('.tab').forEach(function(t){
-  t.onclick = function(){
-    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
-    t.classList.add('on');
-    ['home','send','txs'].forEach(function(id){ el(id).classList.toggle('hide', id !== t.dataset.t); });
-    if(t.dataset.t === 'txs') loadTx();
-  };
+const $ = s => document.querySelector(s);
+$('#addr').textContent = CONFIG.address;
+let connector = null;
+try { connector = new TonConnect({ manifestUrl: CONFIG.manifest }); } catch(e){}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  ['home','txs'].forEach(id=>document.getElementById(id).classList.toggle('hide', id!==t.dataset.t));
+  if(t.dataset.t==='txs') loadTx();
 });
-/* ============================================================
-   ОТПРАВКА
-   ============================================================ */
-el('pay').onclick = function(){
-  var info = el('payInfo');
-  if(!connected){ info.innerHTML = '<span class="err">Сначала подключите кошелёк</span>'; return; }
-  var amt = parseFloat(el('amount').value);
-  if(!amt || amt <= 0){ info.innerHTML = '<span class="err">Введите сумму</span>'; return; }
-
-  var validUntil = Math.floor(Date.now()/1000) + 300;
-  var msg;
-
-  if(el('asset').value === 'ton'){
-    var nano = BigInt(Math.round(amt * 1e9));
-    msg = {
-      address: MY_RAW,
-      amount: nano.toString(),
-      payload: commentPayload(el('comment').value.trim())
-    };
-  } else {
-    var units = BigInt(Math.round(amt * 1e6));
-    var body = {
-      type: 'jettonTransfer',
-      jetton: USDT_RAW,
-      amount: units.toString(),
-      to: MY_RAW,
-      response_address: toRaw(connected.address),
-      forward_ton_amount: '1',
-      forward_payload: '0x'
-    };
-    msg = { address: MY_RAW, amount: '50000000', payload: '0x' + hexUtf8(JSON.stringify(body)) };
-  }
-
-  el('pay').disabled = true;
-  connector.sendTransaction({ validUntil: validUntil, messages: [msg] })
-    .then(function(res){
-      info.innerHTML = '✅ Отправлено! <span class="ok">'+(res.boc||'').slice(0,24)+'…</span>';
-      setTimeout(loadTx, 1500);
-    })
-    .catch(function(e){
-      info.innerHTML = '<span class="err">'+(e && e.message ? e.message : 'Пользователь отклонил транзакцию')+'</span>';
-    })
-    .finally(function(){ el('pay').disabled = false; });
-};
-
-/* ============================================================
-   КУРС TON
-   ============================================================ */
-var tonRate = 0;
-function loadRate(){
-  return fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
-    .then(function(r){ return r.json(); })
-    .then(function(p){
-      tonRate = (p['the-open-network']  {}).usd  0;
-      return tonRate;
-    })
-    .catch(function(){ tonRate = 0; return 0; });
+$('#connect').onclick = () => { if(connector) connector.openModal(); };
+$('#donate').onclick = () => { location.href = `ton://${CONFIG.address}?text=${encodeURIComponent(CONFIG.memo)}`; };
+async function loadBalance(){
+  try{
+    const b = await fetch(`${CONFIG.api}/addressInformation?address=${encodeURIComponent(CONFIG.address)}`).then(r=>r.json());
+    const ton = Number(b.balance||0)/1e9;
+    $('#ton').textContent = ton.toFixed(4) + ' TON (GRAM)';
+    let usdt = 0;
+    try{
+      const j = await fetch(`${CONFIG.api}/jetton/wallet/${CONFIG.usdtJetton}/balance?owner_address=${encodeURIComponent(CONFIG.address)}`).then(r=>r.json());
+      usdt = Number(j.balance||0)/1e6;
+    }catch(e){}
+    let rate = 0;
+    try{
+      const p = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd").then(r=>r.json());
+      rate = (p["the-open-network"]||{}).usd || 0;
+    }catch(e){}
+    $('#usdt').textContent = '$' + (usdt + ton*rate).toFixed(2);
+  }catch(e){ $('#ton').textContent = 'Не удалось загрузить баланс'; }
 }
-
-/* ============================================================
-   БАЛАНС
-   ============================================================ */
-function tcUrl(path){
-  var u = CONFIG.toncenter + path;
-  return CONFIG.apiKey ? u + (u.indexOf('?')>=0?'&':'?') + 'api_key=' + encodeURIComponent(CONFIG.apiKey) : u;
-}
-
-function loadBalance(){
-  fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d){
-      var nano = (d && d.result && d.result.balance)  d.balance  0;
-      var ton  = Number(nano) / 1e9;
-      el('ton').textContent = ton.toFixed(4) + ' TON (GRAM)';
-      return ton;
-    })
-    .then(function(ton){
-      return fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/jettons')
-        .then(function(r){ return r.ok ? r.json() : { balances: [] }; })
-        .then(function(j){
-          var totalUsdt = 0;
-          (j.balances || []).forEach(function(b){
-            var sym = String((b.jetton && b.jetton.symbol) || '').toUpperCase();
-            if(sym === 'USDT' || sym.indexOf('USD') === 0){
-              var dec = (b.jetton && b.jetton.decimals) || 6;
-              totalUsdt += Number(b.balance  b.balance_raw  0) / Math.pow(10, dec);
-            }
-          });
-          return { ton: ton, usdt: totalUsdt };
-        });
-    })
-    .then(function(res){
-      var usdValue = res.usdt + res.ton * tonRate;
-      el('usdt').textContent = '$' + usdValue.toFixed(2);
-      el('usdtRaw').textContent = 'USD₮: ' + res.usdt.toFixed(2)
-        + (tonRate ? ' · Курс TON: $' + tonRate.toFixed(3) : ' · Курс TON: —');
-    })
-    .catch(function(err){
-      el('ton').textContent = 'Не удалось загрузить баланс: ' + err.message;
+async function loadTx(){
+  const box = $('#list'); box.innerHTML = '<div class="mut">Загрузка…</div>';
+  try{
+    const r = await fetch(`${CONFIG.api}/transactions?account=${encodeURIComponent(CONFIG.address)}&limit=30`).then(r=>r.json());
+    const txs = r.transactions || [];
+    if(!txs.length){ box.innerHTML='<div class="mut">Транзакций пока нет</div>'; return; }
+    box.innerHTML='';
+    txs.forEach(t=>{
+      const inc = !!t.in_msg;
+      const val = t.value ? (Number(t.value)/1e9).toFixed(4) : '0';
+      const el = document.createElement('div'); el.className='tx';
+      el.innerHTML = '<div><div class="lbl '+(inc?'in':'out')+'">'+(inc?'▼ Приход':'▲ Расход')+'</div>'
+        + '<div class="mut">'+new Date(t.utime*1000).toLocaleString('ru-RU')+'</div>'
+        + (t.comment?'<div class="mut">'+t.comment+'</div>':'')+'</div>'
+        + '<div class="amt">'+val+' TON</div>';
+      box.appendChild(el);
     });
+  }catch(e){ box.innerHTML='<div class="mut">Ошибка загрузки истории</div>'; }
 }
-/* ============================================================
-   ИСТОРИЯ ТРАНЗАКЦИЙ
-   ============================================================ */
-function loadTx(){
-  var box = el('list');
-  box.innerHTML = '<div class="mut">Загрузка…</div>';
-  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=30')
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d){
-      var txs = d.transactions || [];
-      if(!txs.length){ box.innerHTML = '<div class="mut">Транзакций пока нет</div>'; return; }
-      box.innerHTML = '';
-      txs.forEach(function(t){
-        var inc = !!t.in_msg;
-        var val = ((Number(t.in_msg && t.in_msg.value) || 0) / 1e9).toFixed(4);
-        var d2 = document.createElement('div');
-        d2.className = 'tx';
-        d2.innerHTML =
-          '<div><div class="lbl '+(inc?'in':'out')+'">'+(inc?'▼ Приход':'▲ Расход')+'</div>'
-          + '<div class="mut">'+new Date(t.utime*1000).toLocaleString('ru-RU')+'</div></div>'
-          + '<div class="amt">'+(inc?'+':'-')+val+' TON</div>';
-        box.appendChild(d2);
-      });
-    })
-    .catch(function(err){ box.innerHTML = '<div class="mut">Ошибка загрузки истории: '+err.message+'</div>'; });
-}
-
-/* ============================================================
-   СТАРТ
-   ============================================================ */
-initTonConnect();
-loadRate().then(loadBalance);
-setInterval(function(){ loadRate().then(loadBalance); }, 60000);
-})();
+loadBalance();
+setInterval(loadBalance, 60000);
 </script>
 </body>
 </html>
