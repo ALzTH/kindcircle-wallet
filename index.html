@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Фонд · Стейкинг помощи</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
   :root{
     --bg:#ffffff; --bg2:#f2f3f5; --text:#0f0f10; --hint:#8a8f98;
@@ -37,7 +38,8 @@
   }
   button:active{opacity:.75}
   button.ghost{background:transparent;color:var(--btn);border:1px solid var(--border)}
-  .row{display:flex;gap:8px;margin-bottom:10px}
+  button.small{padding:8px 10px;font-size:13px;width:auto}
+  .row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
   .row button{flex:1}
   .tx{padding:10px 0;border-bottom:1px solid var(--border)}
   .tx:last-child{border-bottom:none}
@@ -50,6 +52,9 @@
   .loading{text-align:center;padding:18px;opacity:.6;font-size:13px}
   .err{color:var(--danger);text-align:center;padding:14px;font-size:13px}
   .status{font-size:11px;opacity:.5;text-align:center;margin-top:8px}
+  .wallet-badge{font-size:12px;opacity:.8;margin-top:4px;font-family:ui-monospace,monospace;word-break:break-all}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
@@ -58,7 +63,24 @@
     <div class="label">Баланс кошелька фонда</div>
     <div class="balance" id="balance">—<small>TON</small></div>
     <div class="addr" id="addr"></div>
+    <div class="row" style="margin-top:10px;margin-bottom:0">
+      <button class="ghost small" onclick="copyFundAddress()">📋 Скопировать адрес</button>
+    </div>
     <div class="status" id="balance-status"></div>
+  </div>
+
+  <div class="card">
+    <div class="label" style="margin-bottom:8px">Подключение кошелька</div>
+    <div id="ton-connect-ui"></div>
+    <div class="wallet-badge" id="wallet-info"></div>
+  </div>
+
+  <div class="card">
+    <div class="label" style="margin-bottom:8px">Пополнить фонд</div>
+    <input type="number" id="donate-amount" placeholder="Сумма в TON" min="0.01" step="0.01" value="1" />
+    <input type="text" id="donate-memo" placeholder="Комментарий (memo) — необязательно" />
+    <button onclick="donate()">💎 Отправить TON</button>
+    <div class="status" id="donate-status"></div>
   </div>
 
   <div class="card">
@@ -75,12 +97,15 @@
     <div id="tx-list"><div class="loading">Загрузка…</div></div>
   </div>
 
+  <div class="toast" id="toast"></div>
+
 <script>
 const FUND_ADDRESS = "UQDt7nJmwMEQ1u6NaMmOPicgwkkUPCrQmKdOtbdzBKRzsq-L";
 const TONCENTER    = "https://toncenter.com/api/v2";
 const TONCENTER_KEY = "";
 const FETCH_LIMIT  = 50;
 const BALANCE_REFRESH_MS = 30000;
+const MANIFEST_URL = "https://ВАШ_ЛОГИН.github.io/ВАШ_РЕПОЗИТОРИЙ/tonconnect-manifest.json";
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
@@ -90,6 +115,16 @@ if (tg) {
   tg.onEvent?.("themeChanged", () => {
     document.body.classList.toggle("tg-dark", tg.colorScheme === "dark");
   });
+}
+
+let tonConnectUI = null;
+let walletAddress = null;
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
 }
 
 function shortAddr(a){
@@ -132,6 +167,109 @@ async function loadBalance(){
     el.innerHTML = `—<small>TON</small>`;
     st.textContent = "ошибка: " + e.message;
     st.style.color = "var(--danger)";
+  }
+}
+
+function copyFundAddress(){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(FUND_ADDRESS).then(() => {
+      showToast("Адрес скопирован");
+    }).catch(() => {
+      fallbackCopy(FUND_ADDRESS);
+    });
+  } else {
+    fallbackCopy(FUND_ADDRESS);
+  }
+}
+function fallbackCopy(text){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); showToast("Адрес скопирован"); }
+  catch(e){ showToast("Не удалось скопировать"); }
+  document.body.removeChild(ta);
+}
+
+function initTonConnect(){
+  if(!window.TON_CONNECT_UI){
+    document.getElementById("ton-connect-ui").innerHTML =
+      '<div class="err">Ошибка загрузки TON Connect</div>';
+    return;
+  }
+  tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+    manifestUrl: MANIFEST_URL,
+    buttonRootId: "ton-connect-ui"
+  });
+
+  tonConnectUI.onStatusChange(wallet => {
+    const info = document.getElementById("wallet-info");
+    if(wallet && wallet.account && wallet.account.address){
+      walletAddress = wallet.account.address;
+      info.textContent = "✅ Подключён: " + shortAddr(walletAddress);
+    } else {
+      walletAddress = null;
+      info.textContent = "";
+    }
+  });
+}
+
+async function donate(){
+  const statusEl = document.getElementById("donate-status");
+  const amountInput = document.getElementById("donate-amount");
+  const memoInput = document.getElementById("donate-memo");
+
+  if(!tonConnectUI){
+    statusEl.textContent = "TON Connect не инициализирован";
+    statusEl.style.color = "var(--danger)";
+    return;
+  }
+  if(!walletAddress){
+    statusEl.textContent = "Сначала подключите кошелёк";
+    statusEl.style.color = "var(--danger)";
+    return;
+  }
+
+  const amount = parseFloat(amountInput.value);
+  if(!amount || amount <= 0){
+    statusEl.textContent = "Укажите корректную сумму";
+    statusEl.style.color = "var(--danger)";
+    return;
+  }
+
+  const nanotons = Math.floor(amount * 1e9).toString();
+  const memo = memoInput.value.trim();
+
+  const message = {
+    address: FUND_ADDRESS,
+    amount: nanotons
+  };
+
+  if(memo){
+    const commentCell = TON_CONNECT_UI.beginCell()
+      .storeUint(0, 32)
+      .storeStringTail(memo)
+      .endCell();
+    message.payload = commentCell.toBoc().toString("base64");
+  }
+
+  statusEl.textContent = "Ожидание подтверждения в кошельке…";
+  statusEl.style.color = "var(--hint)";
+
+  try{
+    const result = await tonConnectUI.sendTransaction({
+      validUntil: Math.floor(Date.now() / 1000) + 300,
+      messages: [message]
+    });
+    statusEl.textContent = "✅ Транзакция отправлена!";
+    statusEl.style.color = "var(--accent)";
+    showToast("Спасибо за помощь!");
+    setTimeout(() => loadTransactions(""), 5000);
+  }catch(e){
+    statusEl.textContent = "Ошибка: " + (e.message || "отклонено");
+    statusEl.style.color = "var(--danger)";
   }
 }
 
@@ -213,6 +351,7 @@ function resetSearch(){
 
 loadBalance();
 loadTransactions("");
+initTonConnect();
 setInterval(loadBalance, BALANCE_REFRESH_MS);
 setInterval(() => {
   if(!document.getElementById("memo").value.trim()){
