@@ -20,7 +20,6 @@
   .btn:disabled{opacity:.5}
   .addr{font-size:12px;color:var(--mut);word-break:break-all;margin-top:10px}
   input,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #26303f;background:#0e131c;color:var(--txt);font-size:15px;font-family:inherit}
-  textarea{resize:vertical;min-height:80px}
   .tx{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #1e2634}
   .lbl{font-weight:600;font-size:14px}
   .in{color:var(--in)} .out{color:var(--out)}
@@ -42,6 +41,13 @@
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999}
   .modal-box{background:var(--card);padding:20px;border-radius:16px;max-width:400px;width:100%}
   .modal-box .addr{font-size:13px;color:var(--txt);margin:10px 0;padding:10px;background:#0e131c;border-radius:10px}
+  .instruction{background:#0e131c;padding:14px;border-radius:12px;margin-top:12px;font-size:14px;line-height:1.6}
+  .instruction b{color:var(--acc)}
+  .thanks-box{background:#0e1f18;border:1px solid var(--in);padding:16px;border-radius:12px;margin-top:12px;font-size:15px;line-height:1.6}
+  .thanks-box .title{font-weight:700;color:var(--in);margin-bottom:6px;font-size:16px}
+  .thanks-box .sub{color:var(--mut);font-size:14px}
+  .wait-box{background:#1f1a0e;border:1px solid var(--warn);padding:14px;border-radius:12px;margin-top:12px;font-size:14px;line-height:1.6}
+  .wait-box .title{font-weight:700;color:var(--warn);margin-bottom:4px}
 </style>
 </head>
 <body>
@@ -63,11 +69,8 @@
       <div class="mut" id="usdtRaw">—</div>
       <div class="addr" id="addr"></div>
       <div class="row">
-        <button class="btn" id="connect">Подключить</button>
-        <button class="btn ghost" id="disconnect" style="display:none">Отключить</button>
         <button class="btn ghost" id="refresh">Обновить</button>
       </div>
-      <div class="mut" id="connInfo" style="margin-top:10px"></div>
       <div class="mut" id="updatedAt" style="margin-top:4px"></div>
     </div>
   </div>
@@ -79,9 +82,20 @@
       <input id="amount" type="number" step="0.0001" min="0" inputmode="decimal">
       <div class="memo" id="memo">—</div>
       <div class="mut" id="memoInfo"></div>
-      <button class="btn" id="pay">Подтвердить в кошельке</button>
+      
+      <div class="instruction" id="instructionBox">
+        <b>Как перевести:</b><br>
+        1. Нажмите «Скопировать адрес»<br>
+        2. Откройте свой кошелёк (Telegram Wallet)<br>
+        3. Отправьте <b>сумму</b> на этот адрес<br>
+        4. В комментарии укажите код <b id="instrMemo">DONATE-XXXXXX</b><br>
+        5. Вернитесь сюда — приложение проверит перевод
+      </div>
+
       <button class="btn ghost" id="copyAddr">Скопировать адрес</button>
-      <div class="mut" id="payInfo" style="margin-top:10px"></div>
+      <button class="btn" id="checkBtn">Проверить перевод</button>
+      
+      <div id="resultBox"></div>
     </div>
   </div>
 
@@ -129,8 +143,6 @@
   <div class="foot">KindCircle Fund · TON</div>
 </div>
 
-<script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
-
 <script>
 (function(){
 "use strict";
@@ -138,9 +150,7 @@
 var CONFIG = {
   address: "UQDt7nJmwMEQ1u6NaMmOPicgwkkUPCrQmKdOtbdzBKRzsq-L",
   toncenter: "https://toncenter.com/api/v2",
-  apiKey: "",
   tonapi: "https://tonapi.io/v2",
-  manifestUrl: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json",
   applyUrl: "",
   staked: 0,
   yieldEarned: 0
@@ -156,44 +166,14 @@ try{
   }
 }catch(e){}
 
-function b64u(s){
-  s = String(s).replace(/-/g,'+').replace(/_/g,'/');
-  while(s.length % 4) s += '=';
-  return atob(s);
-}
-function toRaw(friendly){
-  var bin = b64u(friendly), bytes = [];
-  for(var i=0;i<bin.length;i++) bytes.push(bin.charCodeAt(i));
-  var wcIdx;
-  if(bytes[0] === 0x51){ wcIdx = 3; }
-  else if(bytes[0] === 0x11){ wcIdx = 4; }
-  else { wcIdx = 0; }
-  var wc = bytes[wcIdx] === 0xff ? -1 : bytes[wcIdx];
-  var hex = '';
-  for(var j=wcIdx+1;j<wcIdx+33;j++) hex += ('0'+bytes[j].toString(16)).slice(-2);
-  return wc + ':' + hex;
-}
-var MY_RAW = toRaw(CONFIG.address);
-el('addr').textContent       = CONFIG.address;
-el('donateAddr').textContent = CONFIG.address;
-
-function showCopyModal(text){
-  var w = document.createElement('div');
-  w.className = 'modal';
-  w.innerHTML = '<div class="modal-box">'
-    + '<div class="mut">Адрес кошелька</div>'
-    + '<div class="addr" id="modalAddr">' + text + '</div>'
-    + '<button class="btn" id="selAll">Выделить всё</button>'
-    + '<button class="btn ghost" id="closeW">Закрыть</button>'
-    + '</div>';
-  document.body.appendChild(w);
-  var range = document.createRange();
-  range.selectNodeContents(w.querySelector('#modalAddr'));
-  var sel = window.getSelection();
-  w.querySelector('#selAll').onclick = function(){
-    sel.removeAllRanges(); sel.addRange(range);
-  };
-  w.querySelector('#closeW').onclick = function(){ document.body.removeChild(w); };
+function copyText(text, feedbackEl){
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(function(){
+      if(feedbackEl) feedbackEl.innerHTML = '<span class="ok">Скопировано</span>';
+    }).catch(function(){ fallbackCopy(text, feedbackEl); });
+  } else {
+    fallbackCopy(text, feedbackEl);
+  }
 }
 
 function fallbackCopy(text, feedbackEl){
@@ -211,20 +191,11 @@ function fallbackCopy(text, feedbackEl){
       ? '<span class="ok">Скопировано</span>'
       : '<span class="err">Не удалось скопировать</span>';
   }
-  if(!ok) showCopyModal(text);
-}
-
-function copyText(text, feedbackEl){
-  if(navigator.clipboard && window.isSecureContext){
-    navigator.clipboard.writeText(text).then(function(){
-      if(feedbackEl) feedbackEl.innerHTML = '<span class="ok">Скопировано</span>';
-    }).catch(function(){ fallbackCopy(text, feedbackEl); });
-  } else {
-    fallbackCopy(text, feedbackEl);
-  }
 }
 
 var MEMO_KEY = 'kc_donate_memos';
+var USED_KEY = 'kc_used_memos';
+
 function genMemo(){
   var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   var s = 'DONATE-';
@@ -240,77 +211,34 @@ function saveMemo(m){
   if(arr.indexOf(m) < 0){ arr.push(m); }
   localStorage.setItem(MEMO_KEY, JSON.stringify(arr));
 }
+function loadUsed(){
+  try{ return JSON.parse(localStorage.getItem(USED_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function markUsed(m){
+  var arr = loadUsed();
+  if(arr.indexOf(m) < 0){ arr.push(m); }
+  localStorage.setItem(USED_KEY, JSON.stringify(arr));
+}
+function isUsed(m){
+  return loadUsed().indexOf(m) >= 0;
+}
+
 var currentMemo = '';
 function setNewMemo(){
   currentMemo = genMemo();
   el('memo').textContent = currentMemo;
+  el('instrMemo').textContent = currentMemo;
   el('memoInfo').textContent = '';
+  el('resultBox').innerHTML = '';
 }
 el('memo').onclick = function(){
   if(!currentMemo) return;
   copyText(currentMemo, el('memoInfo'));
 };
 el('copyAddr').onclick = function(){
-  copyText(CONFIG.address, el('payInfo'));
+  copyText(CONFIG.address, el('resultBox'));
 };
-
-/* ===== Ручная сборка BOC с комментарием (op=0 + UTF-8) ===== */
-function buildCommentPayload(text){
-  var utf8 = new TextEncoder().encode(text);
-  var data = new Uint8Array(4 + utf8.length);
-  data[0] = 0; data[1] = 0; data[2] = 0; data[3] = 0;
-  data.set(utf8, 4);
-  var bitLen = data.length * 8;
-
-  var bytes = [];
-  bytes.push(0xb5, 0xee, 0x9c, 0x72);
-  bytes.push(0x00);
-  bytes.push(0x02);
-  bytes.push(0x01);
-  bytes.push(0x01);
-  bytes.push(0x00);
-  bytes.push((data.length >> 8) & 0xff, data.length & 0xff);
-  bytes.push(0x00);
-  bytes.push(0x00);
-  bytes.push((bitLen >> 8) & 0xff, bitLen & 0xff);
-  for(var i=0;i<data.length;i++) bytes.push(data[i]);
-
-  var binary = '';
-  for(var j=0;j<bytes.length;j++) binary += String.fromCharCode(bytes[j]);
-  return btoa(binary);
-}
-
-var tc = null, connected = null;
-function initTonConnect(){
-  if(!window.TON_CONNECT_UI){
-    el('connInfo').innerHTML = '<span class="err">TON Connect UI не загрузился</span>';
-    return;
-  }
-  try{
-    tc = new TON_CONNECT_UI.TonConnectUI({ manifestUrl: CONFIG.manifestUrl });
-    tc.onStatusChange(function(wallet){
-      if(wallet && wallet.account){
-        connected = wallet.account;
-        el('connect').style.display = 'none';
-        el('disconnect').style.display = 'block';
-        el('connInfo').innerHTML = '<span class="ok">Подключён</span>';
-      } else {
-        connected = null;
-        el('connect').style.display = 'block';
-        el('disconnect').style.display = 'none';
-        el('connInfo').textContent = '';
-      }
-    });
-  }catch(e){
-    el('connInfo').innerHTML = '<span class="err">' + e.message + '</span>';
-  }
-}
-el('connect').onclick = function(){
-  if(!tc){ el('connInfo').innerHTML='<span class="err">TON Connect недоступен</span>'; return; }
-  tc.openModal();
-};
-el('disconnect').onclick = function(){ if(tc) tc.disconnect(); };
-el('refresh').onclick = function(){ loadRate().then(loadBalance); };
 
 var TABS = ['home','donate','txs','fund','apply','about'];
 document.querySelectorAll('.tab').forEach(function(t){
@@ -324,37 +252,85 @@ document.querySelectorAll('.tab').forEach(function(t){
   };
 });
 
-el('pay').onclick = function(){
-  var info = el('payInfo');
-  info.textContent = '';
-  if(!tc){ info.innerHTML = '<span class="err">TON Connect не инициализирован</span>'; return; }
-  if(!connected){ info.innerHTML = '<span class="err">Сначала подключите кошелёк</span>'; return; }
-  var amt = parseFloat(el('amount').value);
-  if(!amt || amt <= 0){ info.innerHTML = '<span class="err">Введите сумму</span>'; return; }
-  if(!currentMemo){ setNewMemo(); }
-  var nano = BigInt(Math.round(amt * 1e9));
-  var payload;
-  try{ payload = buildCommentPayload(currentMemo); }
-  catch(e){ info.innerHTML = '<span class="err">' + e.message + '</span>'; return; }
+/* ===== ПРОВЕРКА ПЕРЕВОДА ===== */
+var isChecking = false;
 
-  el('pay').disabled = true;
-  tc.sendTransaction({
-    validUntil: Math.floor(Date.now()/1000) + 300,
-    messages: [{ address: MY_RAW, amount: nano.toString(), payload: payload }]
-  })
-    .then(function(){
-      saveMemo(currentMemo);
-      info.innerHTML = '<span class="ok">Отправлено</span>';
-      setNewMemo();
-      el('amount').value = '';
-      setTimeout(function(){ loadRate().then(loadBalance); loadTx(); loadFundStats(); }, 1500);
-    })
-    .catch(function(e){
-      info.innerHTML = '<span class="err">' + (e && e.message ? e.message : 'Отклонено') + '</span>';
-    })
-    .finally(function(){ el('pay').disabled = false; });
-};
+function checkDonation(){
+  if(isChecking) return;
+  if(!currentMemo){
+    el('resultBox').innerHTML = '<div class="wait-box"><div class="title">Введите сумму</div>Введите сумму перевода и нажмите «Скопировать адрес».</div>';
+    return;
+  }
+  if(isUsed(currentMemo)){
+    el('resultBox').innerHTML = '<div class="wait-box"><div class="title">Этот код уже использован</div>Обновите страницу или подождите — будет выдан новый код.</div>';
+    return;
+  }
+  var expectedAmt = parseFloat(el('amount').value);
+  if(!expectedAmt || expectedAmt <= 0){
+    el('resultBox').innerHTML = '<div class="wait-box"><div class="title">Введите сумму</div>Введите сумму, которую вы отправили.</div>';
+    return;
+  }
 
+  isChecking = true;
+  el('checkBtn').disabled = true;
+  el('resultBox').innerHTML = '<div class="wait-box"><div class="title">Проверяем блокчейн…</div>Это займёт пару секунд.</div>';
+
+  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=20')
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d){
+      var txs = d.transactions || [];
+      var found = null;
+
+      txs.forEach(function(t){
+        if(!t.in_msg || !t.in_msg.source) return;
+        var comment = (t.in_msg.message || t.in_msg.decoded_body || '') || '';
+        if(comment.indexOf(currentMemo) < 0) return;
+        var valTon = Number(t.in_msg.value || 0) / 1e9;
+        if(Math.abs(valTon - expectedAmt) / expectedAmt > 0.05) return;
+        found = { tx: t, comment: comment, val: valTon };
+      });
+
+      if(found){
+        markUsed(currentMemo);
+        saveMemo(currentMemo);
+        el('resultBox').innerHTML =
+          '<div class="thanks-box">'
+          + '<div class="title">Спасибо огромное за ваш вклад!</div>'
+          + '<div>Ваша транзакция на <b>' + found.val.toFixed(4) + ' TON</b> получена и подтверждена.</div>'
+          + '<div class="sub" style="margin-top:8px">Фонд искренне благодарит вас за доверие и веру в нашу миссию. Вместе мы сможем помочь тем, кто действительно нуждается. 💚</div>'
+          + '</div>';
+        el('checkBtn').disabled = false;
+        isChecking = false;
+        el('amount').value = '';
+        setTimeout(function(){
+          loadBalance();
+          loadFundStats();
+          setNewMemo();
+        }, 2000);
+      } else {
+        el('resultBox').innerHTML =
+          '<div class="wait-box">'
+          + '<div class="title">Ваша транзакция ещё обрабатывается</div>'
+          + 'Перевод с кодом <b>' + currentMemo + '</b> пока не найден в блокчейне. Обычно это занимает 10–30 секунд. Подождите немного и нажмите «Проверить перевод» ещё раз.'
+          + '</div>';
+        el('checkBtn').disabled = false;
+        isChecking = false;
+      }
+    })
+    .catch(function(err){
+      el('resultBox').innerHTML = '<div class="wait-box"><div class="title">Ошибка проверки</div>' + err.message + '</div>';
+      el('checkBtn').disabled = false;
+      isChecking = false;
+    });
+}
+
+el('checkBtn').onclick = checkDonation;
+el('refresh').onclick = function(){ loadBalance(); };
+
+/* ===== БАЛАНС ===== */
 var tonRate = 0;
 function loadRate(){
   return fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
@@ -364,9 +340,9 @@ function loadRate(){
 }
 
 function tcUrl(path){
-  var u = CONFIG.toncenter + path;
-  return CONFIG.apiKey ? u + (u.indexOf('?')>=0?'&':'?') + 'api_key=' + encodeURIComponent(CONFIG.apiKey) : u;
+  return CONFIG.toncenter + path;
 }
+
 function loadBalance(){
   return fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -381,10 +357,10 @@ function loadBalance(){
     })
     .catch(function(err){
       el('ton').textContent = err.message;
-      el('updatedAt').textContent = 'Обновлено: ошибка';
     });
 }
 
+/* ===== ИСТОРИЯ ===== */
 function loadTx(){
   var box = el('list');
   box.innerHTML = '<div class="mut">Загрузка…</div>';
@@ -423,6 +399,7 @@ function escapeHtml(s){
   });
 }
 
+/* ===== СТАТИСТИКА ФОНДА ===== */
 function loadFundStats(){
   fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=100')
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -464,7 +441,7 @@ el('applyBtn').onclick = function(){
   }
 };
 
-initTonConnect();
+/* ===== СТАРТ ===== */
 loadRate().then(loadBalance);
 setInterval(function(){ loadRate().then(loadBalance); }, 60000);
 })();
