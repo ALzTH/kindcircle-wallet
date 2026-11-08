@@ -130,6 +130,7 @@
 </div>
 
 <script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tonweb@0.0.66/dist/tonweb.js"></script>
 
 <script>
 (function(){
@@ -254,29 +255,16 @@ el('copyAddr').onclick = function(){
   copyText(CONFIG.address, el('payInfo'));
 };
 
+/* ===== Сборка BOC комментария через TonWeb ===== */
 function buildCommentPayload(text){
-  var utf8 = new TextEncoder().encode(text);
-  var data = new Uint8Array(4 + utf8.length);
-  data[0] = 0; data[1] = 0; data[2] = 0; data[3] = 0;
-  data.set(utf8, 4);
-  var bitLen = data.length * 8;
-
-  var bytes = [];
-  bytes.push(0xb5, 0xee, 0x9c, 0x72);
-  bytes.push(0x00);
-  bytes.push(0x02);
-  bytes.push(0x01);
-  bytes.push(0x01);
-  bytes.push(0x00);
-  bytes.push((data.length >> 8) & 0xff, data.length & 0xff);
-  bytes.push(0x00);
-  bytes.push(0x00);
-  bytes.push((bitLen >> 8) & 0xff, bitLen & 0xff);
-  for(var i=0;i<data.length;i++) bytes.push(data[i]);
-
-  var binary = '';
-  for(var j=0;j<bytes.length;j++) binary += String.fromCharCode(bytes[j]);
-  return btoa(binary);
+  if(!window.TonWeb){
+    throw new Error('TonWeb не загружен. Проверьте интернет.');
+  }
+  var cell = new window.TonWeb.boc.Cell();
+  cell.bits.writeUint(0, 32);
+  cell.bits.writeString(text);
+  var boc = cell.toBoc();
+  return window.TonWeb.utils.bytesToBase64(boc);
 }
 
 var tc = null, connected = null;
