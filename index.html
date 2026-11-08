@@ -130,7 +130,6 @@
 </div>
 
 <script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
-<script src="https://unpkg.com/@ton/core@0.59.0/dist/browser/ton-core.min.js"></script>
 
 <script>
 (function(){
@@ -256,16 +255,27 @@ el('copyAddr').onclick = function(){
 };
 
 function buildCommentPayload(text){
-  if(!window.TonCore || !window.TonCore.beginCell){
-    throw new Error('Библиотека @ton/core не загружена');
-  }
-  var cell = window.TonCore.beginCell()
-    .storeUint(0, 32)
-    .storeStringTail(text)
-    .endCell();
-  var bocBytes = cell.toBoc();
+  var utf8 = new TextEncoder().encode(text);
+  var data = new Uint8Array(4 + utf8.length);
+  data[0] = 0; data[1] = 0; data[2] = 0; data[3] = 0;
+  data.set(utf8, 4);
+  var bitLen = data.length * 8;
+
+  var bytes = [];
+  bytes.push(0xb5, 0xee, 0x9c, 0x72);
+  bytes.push(0x00);
+  bytes.push(0x02);
+  bytes.push(0x01);
+  bytes.push(0x01);
+  bytes.push(0x00);
+  bytes.push((data.length >> 8) & 0xff, data.length & 0xff);
+  bytes.push(0x00);
+  bytes.push(0x00);
+  bytes.push((bitLen >> 8) & 0xff, bitLen & 0xff);
+  for(var i=0;i<data.length;i++) bytes.push(data[i]);
+
   var binary = '';
-  for(var i=0;i<bocBytes.length;i++) binary += String.fromCharCode(bocBytes[i]);
+  for(var j=0;j<bytes.length;j++) binary += String.fromCharCode(bytes[j]);
   return btoa(binary);
 }
 
