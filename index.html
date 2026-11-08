@@ -25,62 +25,48 @@
   .btn:disabled{opacity:.5;box-shadow:none;transform:none}
   .btn.ghost{background:#1e2634;box-shadow:none;color:var(--txt)}
   .btn.ghost:active{background:#26303f}
-  
   .input-wrap{position:relative;margin-top:12px}
   .input-wrap input{width:100%;padding:14px 60px 14px 14px;border-radius:12px;border:1px solid #26303f;background:#0e131c;color:var(--txt);font-size:15px;font-family:inherit}
   .input-wrap input:focus{outline:none;border-color:var(--acc)}
   .input-wrap .currency{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:13px;font-weight:600;pointer-events:none}
   .input-label{font-size:13px;color:var(--mut);margin-top:14px;margin-bottom:4px;display:block}
-  
   .addr-row{display:flex;gap:8px;align-items:center;margin-top:10px}
   .addr{flex:1;font-size:12px;color:var(--mut);word-break:break-all;line-height:1.4;background:#0e131c;padding:10px;border-radius:10px;overflow:hidden;text-overflow:ellipsis}
-  
   .tabbar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
   .tabbar::-webkit-scrollbar{display:none}
   .tab{flex:0 0 auto;text-align:center;padding:10px 16px;border-radius:12px;background:#1e2634;color:var(--mut);font-size:14px;cursor:pointer;white-space:nowrap;transition:all 0.2s}
   .tab.on{background:var(--acc);color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(76,141,255,0.25)}
-  
   .hide{display:none}
   .ok{color:var(--in)} .err{color:var(--out)} .warn{color:var(--warn)}
-  
   .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--in);color:#07210f;margin-left:6px;vertical-align:middle}
   .badge.out{background:var(--out);color:#2a0808}
-  
   .stat{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #1e2634;font-size:14px}
   .stat:last-child{border-bottom:0}
   .stat b{font-size:15px;font-weight:700}
-  
   .row{display:flex;gap:8px;align-items:center;margin-top:10px}
   .row .btn{margin-top:0}
-  
   .tx{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid #1e2634}
   .lbl{font-weight:600;font-size:14px}
   .in{color:var(--in)} .out{color:var(--out)}
   .amt{white-space:nowrap;font-weight:700;font-size:14px;text-align:right}
-  
   .instruction{background:#0e131c;padding:16px;border-radius:14px;margin-top:12px;font-size:14px;line-height:1.7;border:1px solid #1e2634}
   .instruction b{color:var(--acc)}
   .checklist{list-style:none;padding:0;margin:0}
   .checklist li{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
   .checklist li:last-child{margin-bottom:0}
   .checklist .num{background:var(--acc);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
-  
   .checklist li.highlight{background:rgba(76,141,255,0.08);padding:10px;border-radius:10px;border:1px dashed rgba(76,141,255,0.3)}
   .memo-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .memo-text{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;color:var(--acc);letter-spacing:1px}
   .copy-small{background:var(--acc);border:0;color:#fff;width:28px;height:28px;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s}
   .copy-small:active{background:#3b6ee0}
-  
   .network-warning{background:rgba(255,184,77,0.1);border:1px solid var(--warn);padding:14px;border-radius:12px;margin-top:12px;font-size:13px;line-height:1.6}
   .network-warning .title{font-weight:700;color:var(--warn);margin-bottom:6px;font-size:14px;display:flex;align-items:center;gap:6px}
-  
   .thanks-box{background:rgba(61,220,151,0.1);border:1px solid var(--in);padding:18px;border-radius:14px;margin-top:14px;font-size:15px;line-height:1.6;animation:fadeIn 0.5s}
   .thanks-box .title{font-weight:800;color:var(--in);margin-bottom:8px;font-size:17px;display:flex;align-items:center;gap:6px}
   .thanks-box .sub{color:var(--txt);font-size:14px;margin-top:10px;opacity:0.9}
-  
   .wait-box{background:rgba(255,184,77,0.1);border:1px solid var(--warn);padding:16px;border-radius:14px;margin-top:14px;font-size:14px;line-height:1.6}
   .wait-box .title{font-weight:700;color:var(--warn);margin-bottom:6px;font-size:15px}
-  
   #onboarding{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;transition:opacity 0.4s}
   #onboarding.hide-onboard{opacity:0;pointer-events:none}
   .logo-circle{width:80px;height:80px;background:var(--acc-grad);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px;box-shadow:0 8px 24px rgba(76,141,255,0.4)}
@@ -375,6 +361,38 @@ document.querySelectorAll('.tab').forEach(function(t){
   };
 });
 
+/* ===== TONCENTER: получение транзакций ===== */
+function tcUrl(path){
+  var u = CONFIG.toncenter + path;
+  // Если есть ключ — добавь, но пока пусто
+  return u;
+}
+
+function fetchTransactions(limit){
+  return fetch(tcUrl('/getTransactions?address=' + encodeURIComponent(CONFIG.address) + '&limit=' + limit))
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d){
+      if(!d.ok) throw new Error(d.error || 'API error');
+      return d.result || [];
+    });
+}
+
+function parseTx(t){
+  var inc = !!(t.in_msg && t.in_msg.source);
+  var valNano = inc ? t.in_msg.value : (t.out_msgs && t.out_msgs.length ? t.out_msgs[0].value : 0);
+  var val = Number(valNano || 0) / 1e9;
+  var comment = (t.in_msg && t.in_msg.message) ? t.in_msg.message : '';
+  return {
+    utime: t.utime,
+    inc: inc,
+    val: val,
+    comment: comment
+  };
+}
+
 var isChecking = false;
 
 function checkDonation(){
@@ -397,22 +415,15 @@ function checkDonation(){
   el('checkBtn').disabled = true;
   el('resultBox').innerHTML = '<div class="wait-box"><div class="title">Проверяем блокчейн…</div>Это займёт пару секунд.</div>';
 
-  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=20')
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function(d){
-      var txs = d.transactions || [];
+  fetchTransactions(20)
+    .then(function(raw){
       var found = null;
-
-      txs.forEach(function(t){
-        if(!t.in_msg || !t.in_msg.source) return;
-        var comment = (t.in_msg.message || t.in_msg.decoded_body || '') || '';
-        if(comment.indexOf(currentMemo) < 0) return;
-        var valTon = Number(t.in_msg.value || 0) / 1e9;
-        if(Math.abs(valTon - expectedAmt) / expectedAmt > 0.05) return;
-        found = { tx: t, comment: comment, val: valTon };
+      raw.forEach(function(t){
+        var tx = parseTx(t);
+        if(!tx.inc) return;
+        if(tx.comment.indexOf(currentMemo) < 0) return;
+        if(Math.abs(tx.val - expectedAmt) / expectedAmt > 0.05) return;
+        found = tx;
       });
 
       if(found){
@@ -452,6 +463,7 @@ function checkDonation(){
 el('checkBtn').onclick = checkDonation;
 el('refresh').onclick = function(){ loadBalance(); };
 
+/* ===== КУРС ===== */
 var tonRate = 0;
 function loadRate(){
   return fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
@@ -460,8 +472,9 @@ function loadRate(){
     .catch(function(){ tonRate = 0; return 0; });
 }
 
+/* ===== БАЛАНС ===== */
 function loadBalance(){
-  return fetch(CONFIG.toncenter + '/getAddressInformation?address=' + encodeURIComponent(CONFIG.address))
+  return fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d){
       var nano = (d && d.result && d.result.balance) || 0;
@@ -477,33 +490,30 @@ function loadBalance(){
     });
 }
 
+/* ===== ИСТОРИЯ ===== */
 function loadTx(){
   var box = el('list');
   box.innerHTML = '<div class="mut">Загрузка…</div>';
-  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=30')
-    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d){
-      var txs = d.transactions || [];
-      if(!txs.length){ box.innerHTML = '<div class="mut">—</div>'; return; }
+  fetchTransactions(30)
+    .then(function(raw){
+      if(!raw.length){ box.innerHTML = '<div class="mut">—</div>'; return; }
       box.innerHTML = '';
-      txs.forEach(function(t){
-        var inc = !!(t.in_msg && t.in_msg.source);
-        var val = ((Number(t.in_msg && t.in_msg.value) || 0) / 1e9).toFixed(4);
-        var comment = (t.in_msg && (t.in_msg.message || t.in_msg.decoded_body || '')) || '';
-        var isDonate = comment && comment.indexOf('DONATE-') >= 0;
-        var badge = inc
+      raw.forEach(function(t){
+        var tx = parseTx(t);
+        var isDonate = tx.comment && tx.comment.indexOf('DONATE-') >= 0;
+        var badge = tx.inc
           ? (isDonate ? '<span class="badge">ДОНАТ</span>' : '')
           : '<span class="badge out">ВЫПЛАТА</span>';
         var d2 = document.createElement('div');
         d2.className = 'tx';
         d2.innerHTML =
-          '<div><div class="lbl ' + (inc ? 'in' : 'out') + '">'
-            + (inc ? '▼' : '▲') + badge
+          '<div><div class="lbl ' + (tx.inc ? 'in' : 'out') + '">'
+            + (tx.inc ? '▼' : '▲') + badge
           + '</div>'
-          + '<div class="mut">' + new Date(t.utime*1000).toLocaleString('ru-RU') + '</div>'
-          + (comment ? '<div class="mut">💬 ' + escapeHtml(comment.slice(0,40)) + '</div>' : '')
+          + '<div class="mut">' + new Date(tx.utime*1000).toLocaleString('ru-RU') + '</div>'
+          + (tx.comment ? '<div class="mut">💬 ' + escapeHtml(tx.comment.slice(0,40)) + '</div>' : '')
           + '</div>'
-          + '<div class="amt">' + (inc ? '+' : '-') + val + ' TON</div>';
+          + '<div class="amt">' + (tx.inc ? '+' : '-') + tx.val.toFixed(4) + ' TON</div>';
         box.appendChild(d2);
       });
     })
@@ -515,22 +525,20 @@ function escapeHtml(s){
   });
 }
 
+/* ===== СТАТИСТИКА ФОНДА ===== */
 function loadFundStats(){
-  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=100')
-    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d){
-      var txs = d.transactions || [];
+  fetchTransactions(100)
+    .then(function(raw){
       var totalIn = 0, totalOut = 0;
-      txs.forEach(function(t){
-        var inc = !!(t.in_msg && t.in_msg.source);
-        var v = Number(t.in_msg && t.in_msg.value || 0) / 1e9;
-        if(inc) totalIn += v; else totalOut += v;
+      raw.forEach(function(t){
+        var tx = parseTx(t);
+        if(tx.inc) totalIn += tx.val; else totalOut += tx.val;
       });
       el('statIn').textContent  = totalIn.toFixed(4) + ' TON';
       el('statOut').textContent = totalOut.toFixed(4) + ' TON';
       el('statStake').textContent = CONFIG.staked.toFixed(4) + ' TON';
       el('statYield').textContent = CONFIG.yieldEarned.toFixed(4) + ' TON';
-      return fetch(CONFIG.toncenter + '/getAddressInformation?address=' + encodeURIComponent(CONFIG.address))
+      return fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
         .then(function(r){ return r.json(); })
         .then(function(b){
           var ton = Number((b && b.result && b.result.balance) || 0) / 1e9;
@@ -556,6 +564,7 @@ el('applyBtn').onclick = function(){
   }
 };
 
+/* ===== СТАРТ ===== */
 initOnboarding();
 if(loadName()){
   loadRate().then(loadBalance);
