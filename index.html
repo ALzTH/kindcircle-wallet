@@ -1,368 +1,224 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KindCircle Wallet</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Фонд · Стейкинг помощи</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  :root{--bg:#0b0f16;--card:#141a24;--acc:#4c8dff;--txt:#eaf0fa;--mut:#8a97ad;--in:#3ddc97;--out:#ff6b6b}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
-  .wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px}
-  .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:12px}
-  h1{font-size:20px;margin:0 0 4px}
-  .mut{color:var(--mut);font-size:13px}
-  .big{font-size:32px;font-weight:700;margin:10px 0 4px}
-  .btn{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px}
-  .btn.ghost{background:#1e2634}
-  .btn:disabled{opacity:.5}
-  .addr{font-size:12px;color:var(--mut);word-break:break-all;margin-top:10px}
-  input{width:100%;padding:12px;border-radius:10px;border:1px solid #26303f;background:#0e131c;color:var(--txt);font-size:15px}
-  .tx{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #1e2634}
-  .lbl{font-weight:600;font-size:14px}
-  .in{color:var(--in)} .out{color:var(--out)}
-  .amt{white-space:nowrap;font-weight:600;font-size:14px;text-align:right}
-  .foot{color:var(--mut);font-size:11px;text-align:center;padding:18px 4px}
-  .tabbar{display:flex;gap:8px;margin-bottom:12px}
-  .tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:#1e2634;color:var(--mut);font-size:14px;cursor:pointer}
-  .tab.on{background:var(--acc);color:#fff;font-weight:600}
-  .hide{display:none}
-  .ok{color:var(--in)} .err{color:var(--out)}
-  .memo{font-size:22px;font-weight:700;letter-spacing:2px;text-align:center;padding:14px;background:#0e131c;border-radius:12px;margin-top:8px;font-family:ui-monospace,Menlo,Consolas,monospace;cursor:pointer;user-select:all}
-  .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--in);color:#07210f;margin-left:6px;vertical-align:middle}
+  :root{
+    --bg:#ffffff; --bg2:#f2f3f5; --text:#0f0f10; --hint:#8a8f98;
+    --btn:#2481cc; --btntext:#ffffff; --accent:#2ecc71; --danger:#e74c3c; --border:#e5e7eb;
+  }
+  body.tg-dark{
+    --bg:#17212b; --bg2:#232e3c; --text:#f5f5f5; --hint:#8a97a5;
+    --btn:#5288c1; --btntext:#ffffff; --accent:#3ddc84; --border:#2f3b4a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding:14px; font-size:15px;
+    transition:background .2s,color .2s;
+  }
+  .card{background:var(--bg2);border-radius:14px;padding:16px;margin-bottom:12px}
+  .label{font-size:12px;opacity:.65;letter-spacing:.2px;text-transform:uppercase;font-weight:600}
+  .balance{font-size:30px;font-weight:800;margin:6px 0 2px;letter-spacing:-.5px}
+  .balance small{font-size:14px;font-weight:600;opacity:.6;margin-left:4px}
+  .addr{font-size:11px;opacity:.55;word-break:break-all;font-family:ui-monospace,Menlo,monospace;margin-top:4px}
+  input{
+    width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);
+    background:var(--bg);color:var(--text);font-size:15px;margin-bottom:10px;outline:none;
+  }
+  input:focus{border-color:var(--btn)}
+  button{
+    width:100%;padding:12px;border-radius:10px;border:none;background:var(--btn);color:var(--btntext);
+    font-size:15px;font-weight:600;cursor:pointer;transition:opacity .15s;
+  }
+  button:active{opacity:.75}
+  button.ghost{background:transparent;color:var(--btn);border:1px solid var(--border)}
+  .row{display:flex;gap:8px;margin-bottom:10px}
+  .row button{flex:1}
+  .tx{padding:10px 0;border-bottom:1px solid var(--border)}
+  .tx:last-child{border-bottom:none}
+  .tx-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .tx-amt{font-weight:700;color:var(--accent);white-space:nowrap}
+  .tx-amt.out{color:var(--danger)}
+  .tx-date{font-size:11px;opacity:.5}
+  .tx-comment{font-size:13px;opacity:.85;margin-top:3px;word-break:break-word}
+  .tx-sender{font-size:10px;opacity:.45;word-break:break-all;font-family:ui-monospace,monospace;margin-top:2px}
+  .loading{text-align:center;padding:18px;opacity:.6;font-size:13px}
+  .err{color:var(--danger);text-align:center;padding:14px;font-size:13px}
+  .status{font-size:11px;opacity:.5;text-align:center;margin-top:8px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="tabbar">
-    <div class="tab on" data-t="home">Баланс</div>
-    <div class="tab" data-t="send">Пополнить</div>
-    <div class="tab" data-t="txs">История</div>
+
+  <div class="card">
+    <div class="label">Баланс кошелька фонда</div>
+    <div class="balance" id="balance">—<small>TON</small></div>
+    <div class="addr" id="addr"></div>
+    <div class="status" id="balance-status"></div>
   </div>
 
-  <div id="home">
-    <div class="card">
-      <h1>KindCircle Wallet</h1>
-      <div class="big" id="usdt">—</div>
-      <div class="mut" id="ton">—</div>
-      <div class="mut" id="usdtRaw">—</div>
-      <div class="addr" id="addr"></div>
-      <button class="btn" id="connect">Подключить кошелёк</button>
-      <button class="btn ghost" id="disconnect" style="display:none">Отключить</button>
-      <div class="mut" id="connInfo" style="margin-top:10px"></div>
+  <div class="card">
+    <div class="label" style="margin-bottom:8px">Поиск перевода по memo</div>
+    <input type="text" id="memo" placeholder="memo" autocomplete="off" />
+    <div class="row">
+      <button onclick="searchByMemo()">Найти</button>
+      <button class="ghost" onclick="resetSearch()">Сброс</button>
     </div>
   </div>
 
-  <div id="send" class="hide">
-    <div class="card">
-      <h1>Пополнить</h1>
-      <div class="addr" id="myaddr"></div>
-      <input id="amount" type="number" step="0.0001" min="0" inputmode="decimal">
-      <div class="memo" id="memo">—</div>
-      <div class="mut" id="memoInfo"></div>
-      <button class="btn" id="pay">Подтвердить в кошельке</button>
-      <button class="btn ghost" id="copyAddr">Скопировать адрес</button>
-      <div class="mut" id="payInfo" style="margin-top:10px"></div>
-    </div>
+  <div class="card">
+    <div class="label" style="margin-bottom:8px" id="tx-title">Последние поступления</div>
+    <div id="tx-list"><div class="loading">Загрузка…</div></div>
   </div>
-
-  <div id="txs" class="hide">
-    <div class="card">
-      <div id="list"><div class="mut">Загрузка…</div></div>
-    </div>
-  </div>
-
-  <div class="foot">
-    Не является инвестиционной рекомендацией. Мы не храним ваши средства и не имеем доступа к вашему кошельку.
-  </div>
-</div>
-
-<script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
 
 <script>
-(function(){
-"use strict";
+const FUND_ADDRESS = "UQDt7nJmwMEQ1u6NaMmOPicgwkkUPCrQmKdOtbdzBKRzsq-L";
+const TONCENTER    = "https://toncenter.com/api/v2";
+const TONCENTER_KEY = "";
+const FETCH_LIMIT  = 50;
+const BALANCE_REFRESH_MS = 30000;
 
-var CONFIG = {
-  address: "UQD5KTOirYPOhn1FKMc8uK-RFxEZ199H201CV4wtO01e2uS1",
-  toncenter: "https://toncenter.com/api/v2",
-  apiKey: "",
-  tonapi: "https://tonapi.io/v2",
-  manifestUrl: "https://alzth.github.io/kindcircle-wallet/tonconnect-manifest.json"
-};
-
-function el(id){ return document.getElementById(id); }
-function show(id, on){ el(id).classList.toggle('hide', !on); }
-
-function b64u(s){
-  s = String(s).replace(/-/g,'+').replace(/_/g,'/');
-  while(s.length % 4) s += '=';
-  return atob(s);
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  if (tg.colorScheme === "dark") document.body.classList.add("tg-dark");
+  tg.onEvent?.("themeChanged", () => {
+    document.body.classList.toggle("tg-dark", tg.colorScheme === "dark");
+  });
 }
 
-function toRaw(friendly){
-  var bin = b64u(friendly), bytes = [];
-  for(var i=0;i<bin.length;i++) bytes.push(bin.charCodeAt(i));
-  var wcIdx;
-  if(bytes[0] === 0x51){ wcIdx = 3; }
-  else if(bytes[0] === 0x11){ wcIdx = 4; }
-  else { wcIdx = 0; }
-  var wc = bytes[wcIdx] === 0xff ? -1 : bytes[wcIdx];
-  var hex = '';
-  for(var j=wcIdx+1;j<wcIdx+33;j++) hex += ('0'+bytes[j].toString(16)).slice(-2);
-  return wc + ':' + hex;
+function shortAddr(a){
+  if(!a) return "—";
+  if(a.length <= 14) return a;
+  return a.slice(0,6) + "…" + a.slice(-6);
+}
+function fmtDate(unix){
+  if(!unix) return "";
+  const d = new Date(unix*1000);
+  const now = Date.now();
+  const diff = (now - d.getTime())/1000;
+  if(diff < 60) return "только что";
+  if(diff < 3600) return Math.floor(diff/60) + " мин назад";
+  if(diff < 86400) return Math.floor(diff/3600) + " ч назад";
+  return d.toLocaleDateString("ru-RU", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+}
+function ton(n){ return (n/1e9).toFixed(4).replace(/\.?0+$/, "") ; }
+async function api(path, params){
+  const url = new URL(TONCENTER + path);
+  Object.entries(params||{}).forEach(([k,v]) => url.searchParams.set(k,v));
+  if (TONCENTER_KEY) url.searchParams.set("api_key", TONCENTER_KEY);
+  const r = await fetch(url.toString(), { cache: "no-store" });
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  if(!j.ok) throw new Error(j.error || "API error");
+  return j.result;
 }
 
-var MY_RAW = toRaw(CONFIG.address);
-el('addr').textContent   = CONFIG.address;
-el('myaddr').textContent = CONFIG.address;
-
-/* ===== КОПИРОВАНИЕ (универсальное) ===== */
-function fallbackCopy(text, feedbackEl){
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.top = '-9999px';
-  ta.style.left = '-9999px';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  var ok = false;
-  try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
-  document.body.removeChild(ta);
-  if(feedbackEl){
-    feedbackEl.innerHTML = ok
-      ? '<span class="ok">Скопировано</span>'
-      : '<span class="err">Не удалось скопировать</span>';
-  }
-}
-
-function copyText(text, feedbackEl){
-  if(navigator.clipboard && window.isSecureContext){
-    navigator.clipboard.writeText(text).then(function(){
-      if(feedbackEl) feedbackEl.innerHTML = '<span class="ok">Скопировано</span>';
-    }).catch(function(){
-      fallbackCopy(text, feedbackEl);
-    });
-  } else {
-    fallbackCopy(text, feedbackEl);
-  }
-}
-
-/* ===== MEMO ===== */
-var MEMO_KEY = 'kc_memos';
-
-function genMemo(){
-  var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  var s = 'KC-';
-  for(var i=0;i<6;i++) s += abc[Math.floor(Math.random()*abc.length)];
-  return s;
-}
-
-function loadMemos(){
-  try{ return JSON.parse(localStorage.getItem(MEMO_KEY) || '[]'); }
-  catch(e){ return []; }
-}
-function saveMemo(m){
-  var arr = loadMemos();
-  if(arr.indexOf(m) < 0){ arr.push(m); }
-  localStorage.setItem(MEMO_KEY, JSON.stringify(arr));
-}
-
-var currentMemo = '';
-
-function setNewMemo(){
-  currentMemo = genMemo();
-  el('memo').textContent = currentMemo;
-  el('memoInfo').textContent = '';
-}
-
-el('memo').onclick = function(){
-  if(!currentMemo) return;
-  copyText(currentMemo, el('memoInfo'));
-};
-
-el('copyAddr').onclick = function(){
-  copyText(CONFIG.address, el('payInfo'));
-};
-
-/* ===== BOC comment payload ===== */
-function buildCommentPayload(text){
-  var utf = new TextEncoder().encode(text);
-  var data = [0,0,0,0];
-  for(var i=0;i<utf.length;i++) data.push(utf[i]);
-  var bitLen = data.length * 8;
-
-  if(bitLen > 1023){
-    throw new Error('Слишком длинный комментарий');
-  }
-
-  var bytes = [];
-  bytes.push(0xb5, 0xee, 0x9c, 0x72);
-  bytes.push(0x00);
-  bytes.push(0x02);
-  bytes.push(0x01);
-  bytes.push(0x01);
-  bytes.push(0x00);
-  bytes.push((data.length >> 8) & 0xff, data.length & 0xff);
-  bytes.push(0x00);
-  bytes.push(0x00);
-  bytes.push((bitLen >> 8) & 0xff, bitLen & 0xff);
-  for(var j=0;j<data.length;j++) bytes.push(data[j]);
-
-  var binary = '';
-  for(var k=0;k<bytes.length;k++) binary += String.fromCharCode(bytes[k]);
-  return btoa(binary);
-}
-
-/* ===== TON Connect ===== */
-var tc = null;
-var connected = null;
-
-function initTonConnect(){
-  if(!window.TON_CONNECT_UI){
-    el('connInfo').innerHTML = '<span class="err">TON Connect UI не загрузился</span>';
-    return;
-  }
+async function loadBalance(){
+  const el = document.getElementById("balance");
+  const st = document.getElementById("balance-status");
+  document.getElementById("addr").textContent = FUND_ADDRESS;
   try{
-    tc = new TON_CONNECT_UI.TonConnectUI({
-      manifestUrl: CONFIG.manifestUrl
-    });
-    tc.onStatusChange(function(wallet){
-      if(wallet && wallet.account){
-        connected = wallet.account;
-        el('connect').style.display = 'none';
-        el('disconnect').style.display = 'block';
-        el('connInfo').innerHTML = '<span class="ok">Подключён</span>';
-      } else {
-        connected = null;
-        el('connect').style.display = 'block';
-        el('disconnect').style.display = 'none';
-        el('connInfo').textContent = '';
-      }
-    });
+    const nanotons = await api("/getAddressBalance", { address: FUND_ADDRESS });
+    const t = parseInt(nanotons,10) / 1e9;
+    el.innerHTML = `${t.toFixed(4).replace(/\.?0+$/,"")}<small>TON</small>`;
+    st.textContent = "обновлено " + new Date().toLocaleTimeString("ru-RU");
   }catch(e){
-    el('connInfo').innerHTML = '<span class="err">' + e.message + '</span>';
+    el.innerHTML = `—<small>TON</small>`;
+    st.textContent = "ошибка: " + e.message;
+    st.style.color = "var(--danger)";
   }
 }
 
-el('connect').onclick = function(){
-  if(!tc){ el('connInfo').innerHTML='<span class="err">TON Connect недоступен</span>'; return; }
-  tc.openModal();
-};
+let lastTxs = [];
 
-el('disconnect').onclick = function(){ if(tc) tc.disconnect(); };
+async function loadTransactions(memoFilter){
+  const list = document.getElementById("tx-list");
+  const title = document.getElementById("tx-title");
+  list.innerHTML = '<div class="loading">Загрузка…</div>';
 
-document.querySelectorAll('.tab').forEach(function(t){
-  t.onclick = function(){
-    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
-    t.classList.add('on');
-    show('home', t.dataset.t === 'home');
-    show('send', t.dataset.t === 'send');
-    show('txs',  t.dataset.t === 'txs');
-    if(t.dataset.t === 'send') setNewMemo();
-    if(t.dataset.t === 'txs')  loadTx();
-  };
-});
-
-/* ===== Отправка ===== */
-el('pay').onclick = function(){
-  var info = el('payInfo');
-  info.textContent = '';
-  if(!tc){ info.innerHTML = '<span class="err">TON Connect не инициализирован</span>'; return; }
-  if(!connected){ info.innerHTML = '<span class="err">Сначала подключите кошелёк</span>'; return; }
-  var amt = parseFloat(el('amount').value);
-  if(!amt || amt <= 0){ info.innerHTML = '<span class="err">Введите сумму</span>'; return; }
-  if(!currentMemo){ setNewMemo(); }
-
-  var nano = BigInt(Math.round(amt * 1e9));
-  var payload;
   try{
-    payload = buildCommentPayload(currentMemo);
-  }catch(e){
-    info.innerHTML = '<span class="err">' + e.message + '</span>';
-    return;
-  }
+    const txs = await api("/getTransactions", {
+      address: FUND_ADDRESS,
+      limit: FETCH_LIMIT
+    });
 
-  var msg = { address: MY_RAW, amount: nano.toString(), payload: payload };
-  el('pay').disabled = true;
+    let items = [];
+    for(const tx of txs){
+      const inMsg = tx.in_msg || {};
+      const value = parseInt(inMsg.value || "0", 10);
+      if(!value) continue;
 
-  tc.sendTransaction({ validUntil: Math.floor(Date.now()/1000) + 300, messages: [msg] })
-    .then(function(){
-      saveMemo(currentMemo);
-      info.innerHTML = '<span class="ok">Отправлено</span>';
-      setNewMemo();
-      el('amount').value = '';
-      setTimeout(loadTx, 1500);
-    })
-    .catch(function(e){
-      info.innerHTML = '<span class="err">' + (e && e.message ? e.message : 'Отклонено') + '</span>';
-    })
-    .finally(function(){ el('pay').disabled = false; });
-};
+      const comment = (inMsg.message || "").toString();
+      const sender  = inMsg.source || "";
 
-/* ===== Курс ===== */
-var tonRate = 0;
-function loadRate(){
-  return fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
-    .then(function(r){ return r.json(); })
-    .then(function(p){ tonRate = (p['the-open-network'] || {}).usd || 0; return tonRate; })
-    .catch(function(){ tonRate = 0; return 0; });
-}
-
-function tcUrl(path){
-  var u = CONFIG.toncenter + path;
-  return CONFIG.apiKey ? u + (u.indexOf('?')>=0?'&':'?') + 'api_key=' + encodeURIComponent(CONFIG.apiKey) : u;
-}
-
-function loadBalance(){
-  fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
-    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d){
-      var nano = (d && d.result && d.result.balance) || 0;
-      var ton  = Number(nano) / 1e9;
-      el('ton').textContent = ton.toFixed(4) + ' TON';
-      el('usdt').textContent = (ton * tonRate).toFixed(2) + ' $';
-      el('usdtRaw').textContent = tonRate ? ('$' + tonRate.toFixed(3)) : '';
-    })
-    .catch(function(err){ el('ton').textContent = err.message; });
-}
-
-function loadTx(){
-  var box = el('list');
-  box.innerHTML = '<div class="mut">Загрузка…</div>';
-  fetch(CONFIG.tonapi + '/accounts/' + encodeURIComponent(CONFIG.address) + '/transactions?limit=30')
-    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d){
-      var txs = d.transactions || [];
-      if(!txs.length){ box.innerHTML = '<div class="mut">—</div>'; return; }
-      var myMemos = loadMemos();
-      box.innerHTML = '';
-      txs.forEach(function(t){
-        var inc = !!(t.in_msg && t.in_msg.source);
-        var val = ((Number(t.in_msg && t.in_msg.value) || 0) / 1e9).toFixed(4);
-        var comment = (t.in_msg && (t.in_msg.message || t.in_msg.decoded_body || '')) || '';
-        var isMine = myMemos.some(function(m){ return comment && comment.indexOf(m) >= 0; });
-        var d2 = document.createElement('div');
-        d2.className = 'tx';
-        d2.innerHTML =
-          '<div><div class="lbl ' + (inc ? 'in' : 'out') + '">'
-            + (inc ? '▼' : '▲')
-            + (isMine ? '<span class="badge">ВАШЕ</span>' : '')
-          + '</div>'
-          + '<div class="mut">' + new Date(t.utime*1000).toLocaleString('ru-RU') + '</div>'
-          + '</div>'
-          + '<div class="amt">' + (inc ? '+' : '-') + val + ' TON</div>';
-        box.appendChild(d2);
+      items.push({
+        hash: tx.transaction_id?.hash || "",
+        sender,
+        amount: value,
+        comment,
+        time: tx.utime || 0
       });
-    })
-    .catch(function(err){ box.innerHTML = '<div class="mut">' + err.message + '</div>'; });
+    }
+
+    if(memoFilter){
+      const q = memoFilter.toLowerCase();
+      items = items.filter(it => it.comment.toLowerCase().includes(q));
+      title.textContent = `Результаты по memo: "${memoFilter}" (${items.length})`;
+    }else{
+      title.textContent = `Последние поступления (${items.length})`;
+    }
+
+    lastTxs = items;
+
+    if(items.length === 0){
+      list.innerHTML = '<div class="loading">Ничего не найдено</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(it => `
+      <div class="tx">
+        <div class="tx-head">
+          <span class="tx-amt">+${ton(it.amount)} TON</span>
+          <span class="tx-date">${fmtDate(it.time)}</span>
+        </div>
+        <div class="tx-comment">${it.comment ? "💬 " + escapeHtml(it.comment) : "<i style='opacity:.5'>без комментария</i>"}</div>
+        <div class="tx-sender">от ${escapeHtml(shortAddr(it.sender))}</div>
+      </div>
+    `).join("");
+  }catch(e){
+    list.innerHTML = `<div class="err">Ошибка: ${escapeHtml(e.message)}</div>`;
+  }
 }
 
-initTonConnect();
-loadRate().then(loadBalance);
-setInterval(function(){ loadRate().then(loadBalance); }, 60000);
-})();
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function searchByMemo(){
+  const v = document.getElementById("memo").value.trim();
+  loadTransactions(v);
+}
+function resetSearch(){
+  document.getElementById("memo").value = "";
+  loadTransactions("");
+}
+
+loadBalance();
+loadTransactions("");
+setInterval(loadBalance, BALANCE_REFRESH_MS);
+setInterval(() => {
+  if(!document.getElementById("memo").value.trim()){
+    loadTransactions("");
+  }
+}, BALANCE_REFRESH_MS);
 </script>
 </body>
 </html>
