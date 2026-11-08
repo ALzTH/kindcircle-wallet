@@ -254,6 +254,32 @@ el('copyAddr').onclick = function(){
   copyText(CONFIG.address, el('payInfo'));
 };
 
+/* ===== Ручная сборка BOC с комментарием (op=0 + UTF-8) ===== */
+function buildCommentPayload(text){
+  var utf8 = new TextEncoder().encode(text);
+  var data = new Uint8Array(4 + utf8.length);
+  data[0] = 0; data[1] = 0; data[2] = 0; data[3] = 0;
+  data.set(utf8, 4);
+  var bitLen = data.length * 8;
+
+  var bytes = [];
+  bytes.push(0xb5, 0xee, 0x9c, 0x72);
+  bytes.push(0x00);
+  bytes.push(0x02);
+  bytes.push(0x01);
+  bytes.push(0x01);
+  bytes.push(0x00);
+  bytes.push((data.length >> 8) & 0xff, data.length & 0xff);
+  bytes.push(0x00);
+  bytes.push(0x00);
+  bytes.push((bitLen >> 8) & 0xff, bitLen & 0xff);
+  for(var i=0;i<data.length;i++) bytes.push(data[i]);
+
+  var binary = '';
+  for(var j=0;j<bytes.length;j++) binary += String.fromCharCode(bytes[j]);
+  return btoa(binary);
+}
+
 var tc = null, connected = null;
 function initTonConnect(){
   if(!window.TON_CONNECT_UI){
@@ -307,19 +333,14 @@ el('pay').onclick = function(){
   if(!amt || amt <= 0){ info.innerHTML = '<span class="err">Введите сумму</span>'; return; }
   if(!currentMemo){ setNewMemo(); }
   var nano = BigInt(Math.round(amt * 1e9));
+  var payload;
+  try{ payload = buildCommentPayload(currentMemo); }
+  catch(e){ info.innerHTML = '<span class="err">' + e.message + '</span>'; return; }
 
   el('pay').disabled = true;
-
-  /* Альтернативный способ: structured items с типом ton.
-     Кошелёк сам собирает тело сообщения с комментарием. */
   tc.sendTransaction({
     validUntil: Math.floor(Date.now()/1000) + 300,
-    items: [{
-      type: 'ton',
-      address: CONFIG.address,
-      amount: nano.toString(),
-      payload: currentMemo
-    }]
+    messages: [{ address: MY_RAW, amount: nano.toString(), payload: payload }]
   })
     .then(function(){
       saveMemo(currentMemo);
