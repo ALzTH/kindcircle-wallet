@@ -25,52 +25,62 @@
   .btn:disabled{opacity:.5;box-shadow:none;transform:none}
   .btn.ghost{background:#1e2634;box-shadow:none;color:var(--txt)}
   .btn.ghost:active{background:#26303f}
+  
   .input-wrap{position:relative;margin-top:12px}
   .input-wrap input{width:100%;padding:14px 60px 14px 14px;border-radius:12px;border:1px solid #26303f;background:#0e131c;color:var(--txt);font-size:15px;font-family:inherit}
   .input-wrap input:focus{outline:none;border-color:var(--acc)}
   .input-wrap .currency{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:13px;font-weight:600;pointer-events:none}
   .input-label{font-size:13px;color:var(--mut);margin-top:14px;margin-bottom:4px;display:block}
+  
   .addr-row{display:flex;gap:8px;align-items:center;margin-top:10px}
   .addr{flex:1;font-size:12px;color:var(--mut);word-break:break-all;line-height:1.4;background:#0e131c;padding:10px;border-radius:10px;overflow:hidden;text-overflow:ellipsis}
-  .icon-btn{background:#1e2634;border:0;color:var(--txt);width:44px;height:44px;border-radius:10px;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
-  .icon-btn:active{background:var(--acc)}
+  
   .tabbar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
   .tabbar::-webkit-scrollbar{display:none}
   .tab{flex:0 0 auto;text-align:center;padding:10px 16px;border-radius:12px;background:#1e2634;color:var(--mut);font-size:14px;cursor:pointer;white-space:nowrap;transition:all 0.2s}
   .tab.on{background:var(--acc);color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(76,141,255,0.25)}
+  
   .hide{display:none}
   .ok{color:var(--in)} .err{color:var(--out)} .warn{color:var(--warn)}
+  
   .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--in);color:#07210f;margin-left:6px;vertical-align:middle}
   .badge.out{background:var(--out);color:#2a0808}
+  
   .stat{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #1e2634;font-size:14px}
   .stat:last-child{border-bottom:0}
   .stat b{font-size:15px;font-weight:700}
+  
   .row{display:flex;gap:8px;align-items:center;margin-top:10px}
   .row .btn{margin-top:0}
+  
   .tx{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid #1e2634}
   .lbl{font-weight:600;font-size:14px}
   .in{color:var(--in)} .out{color:var(--out)}
   .amt{white-space:nowrap;font-weight:700;font-size:14px;text-align:right}
+  
   .instruction{background:#0e131c;padding:16px;border-radius:14px;margin-top:12px;font-size:14px;line-height:1.7;border:1px solid #1e2634}
   .instruction b{color:var(--acc)}
   .checklist{list-style:none;padding:0;margin:0}
   .checklist li{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
   .checklist li:last-child{margin-bottom:0}
   .checklist .num{background:var(--acc);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
+  
   .checklist li.highlight{background:rgba(76,141,255,0.08);padding:10px;border-radius:10px;border:1px dashed rgba(76,141,255,0.3)}
   .memo-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .memo-text{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;color:var(--acc);letter-spacing:1px}
   .copy-small{background:var(--acc);border:0;color:#fff;width:28px;height:28px;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s}
   .copy-small:active{background:#3b6ee0}
+  
   .network-warning{background:rgba(255,184,77,0.1);border:1px solid var(--warn);padding:14px;border-radius:12px;margin-top:12px;font-size:13px;line-height:1.6}
   .network-warning .title{font-weight:700;color:var(--warn);margin-bottom:6px;font-size:14px;display:flex;align-items:center;gap:6px}
+  
   .thanks-box{background:rgba(61,220,151,0.1);border:1px solid var(--in);padding:18px;border-radius:14px;margin-top:14px;font-size:15px;line-height:1.6;animation:fadeIn 0.5s}
   .thanks-box .title{font-weight:800;color:var(--in);margin-bottom:8px;font-size:17px;display:flex;align-items:center;gap:6px}
   .thanks-box .sub{color:var(--txt);font-size:14px;margin-top:10px;opacity:0.9}
+  
   .wait-box{background:rgba(255,184,77,0.1);border:1px solid var(--warn);padding:16px;border-radius:14px;margin-top:14px;font-size:14px;line-height:1.6}
   .wait-box .title{font-weight:700;color:var(--warn);margin-bottom:6px;font-size:15px}
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999}
-  .modal-box{background:var(--card);padding:24px;border-radius:20px;max-width:400px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);animation:fadeIn 0.3s}
+  
   #onboarding{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;transition:opacity 0.4s}
   #onboarding.hide-onboard{opacity:0;pointer-events:none}
   .logo-circle{width:80px;height:80px;background:var(--acc-grad);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px;box-shadow:0 8px 24px rgba(76,141,255,0.4)}
@@ -121,7 +131,6 @@
       
       <div class="addr-row">
         <div class="addr" id="donateAddr"></div>
-        <button class="icon-btn" id="copyAddr" title="Скопировать адрес">📋</button>
       </div>
 
       <label class="input-label">Сумма перевода</label>
@@ -154,6 +163,7 @@
         Отправляйте перевод строго в сети <b>TON (The Open Network)</b>. Если вы отправите в другой сети (BEP-20, ERC-20 или через мост) — средства не дойдут до фонда, и транзакция не будет засчитана.
       </div>
 
+      <button class="btn ghost" id="copyAddr" style="margin-top:14px">📋 Скопировать адрес кошелька</button>
       <button class="btn" id="checkBtn">✅ Проверить перевод</button>
       
       <div id="resultBox"></div>
