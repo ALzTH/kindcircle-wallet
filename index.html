@@ -130,7 +130,6 @@
 </div>
 
 <script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tonweb@0.0.66/dist/tonweb.js"></script>
 
 <script>
 (function(){
@@ -255,18 +254,6 @@ el('copyAddr').onclick = function(){
   copyText(CONFIG.address, el('payInfo'));
 };
 
-/* ===== Сборка BOC комментария через TonWeb ===== */
-function buildCommentPayload(text){
-  if(!window.TonWeb){
-    throw new Error('TonWeb не загружен. Проверьте интернет.');
-  }
-  var cell = new window.TonWeb.boc.Cell();
-  cell.bits.writeUint(0, 32);
-  cell.bits.writeString(text);
-  var boc = cell.toBoc();
-  return window.TonWeb.utils.bytesToBase64(boc);
-}
-
 var tc = null, connected = null;
 function initTonConnect(){
   if(!window.TON_CONNECT_UI){
@@ -320,14 +307,19 @@ el('pay').onclick = function(){
   if(!amt || amt <= 0){ info.innerHTML = '<span class="err">Введите сумму</span>'; return; }
   if(!currentMemo){ setNewMemo(); }
   var nano = BigInt(Math.round(amt * 1e9));
-  var payload;
-  try{ payload = buildCommentPayload(currentMemo); }
-  catch(e){ info.innerHTML = '<span class="err">' + e.message + '</span>'; return; }
 
   el('pay').disabled = true;
+
+  /* Альтернативный способ: structured items с типом ton.
+     Кошелёк сам собирает тело сообщения с комментарием. */
   tc.sendTransaction({
     validUntil: Math.floor(Date.now()/1000) + 300,
-    messages: [{ address: MY_RAW, amount: nano.toString(), payload: payload }]
+    items: [{
+      type: 'ton',
+      address: CONFIG.address,
+      amount: nano.toString(),
+      payload: currentMemo
+    }]
   })
     .then(function(){
       saveMemo(currentMemo);
