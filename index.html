@@ -43,6 +43,8 @@
   .modal-box .addr{font-size:13px;color:var(--txt);margin:10px 0;padding:10px;background:#0e131c;border-radius:10px}
   .instruction{background:#0e131c;padding:14px;border-radius:12px;margin-top:12px;font-size:14px;line-height:1.6}
   .instruction b{color:var(--acc)}
+  .network-warning{background:#2a1508;border:1px solid var(--warn);padding:12px;border-radius:10px;margin-top:12px;font-size:13px;line-height:1.5;color:var(--txt)}
+  .network-warning .title{font-weight:700;color:var(--warn);margin-bottom:4px;font-size:14px}
   .thanks-box{background:#0e1f18;border:1px solid var(--in);padding:16px;border-radius:12px;margin-top:12px;font-size:15px;line-height:1.6}
   .thanks-box .title{font-weight:700;color:var(--in);margin-bottom:6px;font-size:16px}
   .thanks-box .sub{color:var(--mut);font-size:14px}
@@ -90,6 +92,11 @@
         3. Отправьте <b>сумму</b> на этот адрес<br>
         4. В комментарии укажите код <b id="instrMemo">DONATE-XXXXXX</b><br>
         5. Вернитесь сюда — приложение проверит перевод
+      </div>
+
+      <div class="network-warning">
+        <div class="title">⚠️ Важно: только сеть TON</div>
+        Отправляйте перевод строго в сети <b>TON (The Open Network)</b>. Если вы отправите в другой сети (BEP-20, ERC-20 или через мост) — средства не дойдут до фонда, и транзакция не будет засчитана.
       </div>
 
       <button class="btn ghost" id="copyAddr">Скопировать адрес</button>
