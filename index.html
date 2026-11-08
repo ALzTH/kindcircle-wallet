@@ -78,7 +78,6 @@
 </div>
 
 <script src="https://unpkg.com/@tonconnect/ui@2.0.9/dist/tonconnect-ui.min.js"></script>
-<script src="https://unpkg.com/@ton/core@0.59.0/dist/browser/ton-core.min.js"></script>
 
 <script>
 (function(){
@@ -156,20 +155,49 @@ el('copyAddr').onclick = function(){
   el('payInfo').innerHTML = '<span class="ok">Адрес скопирован</span>';
 };
 
-function buildCommentBody(text){
-  if(window.TonCore && window.TonCore.beginCell && window.TonCore.serializeBoc){
-    var cell = window.TonCore.beginCell()
-      .storeUint(0, 32)
-      .storeStringTail(text)
-      .endCell();
-    var out = window.TonCore.serializeBoc(cell);
-    var s = '';
-    for(var i=0;i<out.length;i++) s += ('0'+out[i].toString(16)).slice(-2);
-    return s;
+/* ===== Сборка BOC с комментарием (0x00000000 + utf8) в Base64 ===== */
+function buildCommentPayload(text){
+  var utf = new TextEncoder().encode(text);
+  var data = [0,0,0,0];
+  for(var i=0;i<utf.length;i++) data.push(utf[i]);
+  var bitLen = data.length * 8;
+
+  if(bitLen > 1023){
+    throw new Error('Слишком длинный комментарий');
   }
-  return '';
+
+  var bytes = [];
+  // BOC magic
+  bytes.push(0xb5, 0xee, 0x9c, 0x72);
+  // flags: has_idx=0, has_crc=0, size_bytes = 1 (для cells_num < 256)
+  bytes.push(0x00);
+  // off_bytes: 2 (мы будем писать tot_cells_size в 2 байтах для надёжности)
+  bytes.push(0x02);
+  // cells_num = 1
+  bytes.push(0x01);
+  // roots_num = 1
+  bytes.push(0x01);
+  // absent_num = 0
+  bytes.push(0x00);
+  // tot_cells_size = data.length (сколько байт данных в ячейке)
+  bytes.push((data.length >> 8) & 0xff, data.length & 0xff);
+  // root_index = 0
+  bytes.push(0x00);
+
+  // cell descriptor
+  // d1: refs_num(3)=0, exotic(1)=0, level(4)=0
+  bytes.push(0x00);
+  // d2: bits_len — используем 2 байта (для bitLen до 65535)
+  bytes.push((bitLen >> 8) & 0xff, bitLen & 0xff);
+  // data
+  for(var j=0;j<data.length;j++) bytes.push(data[j]);
+
+  var binary = '';
+  for(var k=0;k<bytes.length;k++) binary += String.fromCharCode(bytes[k]);
+  return btoa(binary);
 }
 
+/* ===== TON Connect ===== */
 var tc = null;
 var connected = null;
 
@@ -219,6 +247,7 @@ document.querySelectorAll('.tab').forEach(function(t){
   };
 });
 
+/* ===== Отправка ===== */
 el('pay').onclick = function(){
   var info = el('payInfo');
   info.textContent = '';
@@ -229,10 +258,11 @@ el('pay').onclick = function(){
   if(!currentMemo){ setNewMemo(); }
 
   var nano = BigInt(Math.round(amt * 1e9));
-  var payload = '';
-  try{ payload = buildCommentBody(currentMemo); }catch(e){ payload = ''; }
-  if(!payload){
-    info.innerHTML = '<span class="err">Ошибка payload</span>';
+  var payload;
+  try{
+    payload = buildCommentPayload(currentMemo);
+  }catch(e){
+    info.innerHTML = '<span class="err">' + e.message + '</span>';
     return;
   }
 
@@ -253,6 +283,7 @@ el('pay').onclick = function(){
     .finally(function(){ el('pay').disabled = false; });
 };
 
+/* ===== Курс ===== */
 var tonRate = 0;
 function loadRate(){
   return fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd')
