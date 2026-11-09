@@ -103,7 +103,7 @@
   .form-group textarea{resize:vertical;min-height:70px}
   .form-group input:focus, .form-group textarea:focus{outline:none;border-color:var(--acc)}
   .modal-overlay{position:fixed;inset:0;background:rgba(11,15,22,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999}
-  .modal-content{background:var(--card);padding:24px;border-radius:18px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid var(--border)}
+  .modal-content{background:var(--card);padding:24px;border-radius:18px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid var(--border);text-align:center}
   .modal-content h2{margin-bottom:16px}
 </style>
 </head>
@@ -235,24 +235,8 @@
   <div id="apply" class="hide">
     <div class="card">
       <h1>Заявка на помощь</h1>
-      <p class="mut" style="margin-bottom:16px">Если вы оказались в трудной ситуации, заполните форму. Мы рассматриваем каждую просьбу конфиденциально.</p>
-      <div class="form-group">
-        <label>Ваше имя</label>
-        <input id="applyName" type="text" maxlength="50">
-      </div>
-      <div class="form-group">
-        <label>Сумма (TON)</label>
-        <input id="applyAmount" type="number" step="0.01" min="0">
-      </div>
-      <div class="form-group">
-        <label>Причина</label>
-        <textarea id="applyReason" maxlength="300"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Ссылка на документы</label>
-        <input id="applyDocs" type="text" maxlength="200">
-      </div>
-      <button class="btn" id="applyBtn">📝 Отправить заявку</button>
+      <p class="mut" style="margin-bottom:16px">Мы помогаем людям, попавшим в трудную жизненную ситуацию. Чтобы получить помощь, напишите нашему координатору в Telegram.</p>
+      <button class="btn" id="applyBtn">📝 Написать координатору</button>
       <div class="mut" id="applyResult" style="margin-top:12px;text-align:center"></div>
     </div>
   </div>
@@ -301,12 +285,11 @@
 var CONFIG = {
   address: "UQDt7nJmwMEQ1u6NaMmOPicgwkkUPCrQmKdOtbdzBKRzsq-L",
   toncenter: "https://toncenter.com/api/v2",
-  applyUrl: "",
   goalTon: 100,
   staked: 0,
   yieldEarned: 0,
-  // ВСТАВЬ СЮДА ССЫЛКУ НА СВОЕГО БОТА (например, "https://t.me/kindcircle_bot")
-  botUrl: "https://t.me/kindcircle_bot"
+  botUrl: "https://t.me/kindcircle_bot",
+  coordinator: "@Szhyfdkrond" // Твой ник для связи
 };
 
 function el(id){ return document.getElementById(id); }
@@ -383,7 +366,7 @@ el('menuChangeName').onclick = function(){
     '<div class="modal-content">'
     + '<h2>Сменить имя</h2>'
     + '<div class="form-group">'
-    + '<input id="newNameInput" type="text" maxlength="20" value="' + current + '" style="font-size:16px;padding:14px">'
+    + '<input id="newNameInput" type="text" maxlength="20" value="' + current + '" style="font-size:16px;padding:14px;text-align:center">'
     + '</div>'
     + '<button class="btn" id="saveNewNameBtn">Сохранить</button>'
     + '<button class="btn ghost" id="cancelNewNameBtn" style="margin-top:8px">Отмена</button>'
@@ -405,7 +388,6 @@ el('menuAbout').onclick = function(){
   document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
 };
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОДЕЛИТЬСЯ
 function shareApp(){
   var text = 'Поддержи благотворительный фонд KindCircle на TON! Присоединяйся:';
   var url = CONFIG.botUrl;
@@ -734,28 +716,32 @@ function loadFundStats(){
     .catch(function(err){ el('statIn').textContent = err.message; });
 }
 
+// НОВАЯ ФУНКЦИЯ ДЛЯ ЗАЯВКИ
 el('applyBtn').onclick = function(){
-  var name = el('applyName').value.trim();
-  var amount = el('applyAmount').value.trim();
-  var reason = el('applyReason').value.trim();
-  var docs = el('applyDocs').value.trim();
-  var res = el('applyResult');
+  var modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML =
+    '<div class="modal-content" style="text-align:left">'
+    + '<h2 style="text-align:center">Инструкция</h2>'
+    + '<p class="mut" style="margin-bottom:16px;text-align:center;font-size:14px">Чтобы оставить заявку на помощь, скопируйте ник координатора и напишите ему в Telegram. <br><br>Коротко опишите ситуацию, укажите сумму и прикрепите документы (если есть).</p>'
+    + '<div style="background:#0e131c;padding:16px;border-radius:12px;text-align:center;margin-bottom:16px;border:1px solid var(--border)">'
+    + '<div style="font-size:18px;font-weight:700;color:var(--acc);margin-bottom:8px">' + CONFIG.coordinator + '</div>'
+    + '<button class="btn ghost" id="copyContactBtn" style="margin-top:0">📋 Скопировать ник</button>'
+    + '</div>'
+    + '<a class="btn" href="https://t.me/' + CONFIG.coordinator.replace('@','') + '" target="_blank" style="text-decoration:none;text-align:center">✉️ Написать в Telegram</a>'
+    + '<button class="btn ghost" id="closeApplyModal" style="margin-top:12px">Закрыть</button>'
+    + '</div>';
+  document.body.appendChild(modal);
 
-  if(!name || !amount || !reason){
-    res.innerHTML = '<span class="err">Заполните имя, сумму и причину</span>';
-    return;
-  }
-  if(CONFIG.applyUrl){
-    var text = 'Заявка KindCircle%0AИмя: ' + encodeURIComponent(name) + '%0AСумма: ' + encodeURIComponent(amount) + '%0AПричина: ' + encodeURIComponent(reason) + '%0AДокументы: ' + encodeURIComponent(docs);
-    window.open(CONFIG.applyUrl + '?text=' + text, '_blank');
-  } else {
-    res.innerHTML = '<span class="warn">Форма отправлена (демо).</span>';
-    try{
-      var arr = JSON.parse(localStorage.getItem('kc_apply_requests') || '[]');
-      arr.push({ name: name, amount: amount, reason: reason, docs: docs, at: Date.now() });
-      localStorage.setItem('kc_apply_requests', JSON.stringify(arr));
-    }catch(e){}
-  }
+  modal.querySelector('#copyContactBtn').onclick = function(){
+    copyText(CONFIG.coordinator, el('applyResult'));
+    modal.querySelector('#copyContactBtn').textContent = '✅ Скопировано!';
+    setTimeout(function(){ modal.querySelector('#copyContactBtn').textContent = '📋 Скопировать ник'; }, 2000);
+  };
+
+  modal.querySelector('#closeApplyModal').onclick = function(){
+    document.body.removeChild(modal);
+  };
 };
 
 initOnboarding();
