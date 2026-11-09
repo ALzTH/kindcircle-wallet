@@ -304,10 +304,10 @@ var CONFIG = {
   applyUrl: "",
   goalTon: 100,
   staked: 0,
-  yieldEarned: 0
+  yieldEarned: 0,
+  // ВСТАВЬ СЮДА ССЫЛКУ НА СВОЕГО БОТА (например, "https://t.me/kindcircle_bot")
+  botUrl: "https://t.me/kindcircle_bot"
 };
-
-var BOT_LINK = "https://t.me/KindCircle_bot";
 
 function el(id){ return document.getElementById(id); }
 function show(id, on){ el(id).classList.toggle('hide', !on); }
@@ -377,7 +377,6 @@ document.addEventListener('click', function(){
 
 el('menuChangeName').onclick = function(){
   var current = loadName();
-  
   var modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.innerHTML =
@@ -390,21 +389,14 @@ el('menuChangeName').onclick = function(){
     + '<button class="btn ghost" id="cancelNewNameBtn" style="margin-top:8px">Отмена</button>'
     + '</div>';
   document.body.appendChild(modal);
-
   var inp = modal.querySelector('#newNameInput');
   inp.focus();
-
   modal.querySelector('#saveNewNameBtn').onclick = function(){
     var newName = inp.value.trim();
-    if(newName){
-      saveName(newName);
-    }
+    if(newName){ saveName(newName); }
     document.body.removeChild(modal);
   };
-  
-  modal.querySelector('#cancelNewNameBtn').onclick = function(){
-    document.body.removeChild(modal);
-  };
+  modal.querySelector('#cancelNewNameBtn').onclick = function(){ document.body.removeChild(modal); };
 };
 
 el('menuAbout').onclick = function(){
@@ -413,16 +405,21 @@ el('menuAbout').onclick = function(){
   document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
 };
 
-el('menuShare').onclick = function(){
-  var text = 'Поддержи благотворительный фонд KindCircle на TON! Переходи в бота: ' + BOT_LINK;
-  var url = BOT_LINK;
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОДЕЛИТЬСЯ
+function shareApp(){
+  var text = 'Поддержи благотворительный фонд KindCircle на TON! Присоединяйся:';
+  var url = CONFIG.botUrl;
+  var shareLink = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text);
+  
   var tg = window.Telegram && window.Telegram.WebApp;
   if(tg && tg.openTelegramLink){
-    tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text));
+    tg.openTelegramLink(shareLink);
   } else {
-    window.open('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text), '_blank');
+    window.open(shareLink, '_blank');
   }
-};
+}
+
+el('menuShare').onclick = shareApp;
 
 function copyText(text, feedbackEl){
   if(navigator.clipboard && window.isSecureContext){
@@ -554,16 +551,7 @@ function showSuccessOverlay(amount){
   document.body.appendChild(overlay);
 
   var shareBtn = overlay.querySelector('#shareAfterBtn');
-  shareBtn.onclick = function(){
-    var text = 'Я поддержал благотворительный фонд KindCircle на TON. Присоединяйся к боту: ' + BOT_LINK;
-    var url = BOT_LINK;
-    var tg = window.Telegram && window.Telegram.WebApp;
-    if(tg && tg.openTelegramLink){
-      tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text));
-    } else {
-      window.open('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text), '_blank');
-    }
-  };
+  shareBtn.onclick = shareApp;
 
   setTimeout(function(){
     overlay.style.opacity = '0';
