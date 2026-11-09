@@ -102,6 +102,11 @@
   .form-group input, .form-group textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--skeleton);background:#0e131c;color:var(--txt);font-size:14px;font-family:inherit}
   .form-group textarea{resize:vertical;min-height:70px}
   .form-group input:focus, .form-group textarea:focus{outline:none;border-color:var(--acc)}
+  
+  /* Стили для модалки смены имени */
+  .modal-overlay{position:fixed;inset:0;background:rgba(11,15,22,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999}
+  .modal-content{background:var(--card);padding:24px;border-radius:18px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid var(--border)}
+  .modal-content h2{margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -370,10 +375,37 @@ document.addEventListener('click', function(){
   if(dropdownOpen){ dropdownOpen = false; el('dropdownMenu').classList.add('hide'); }
 });
 
+// ЗАМЕНА PROMPT НА СВОЕ МОДАЛЬНОЕ ОКНО
 el('menuChangeName').onclick = function(){
   var current = loadName();
-  var newName = prompt('Ваше имя:', current);
-  if(newName && newName.trim()) saveName(newName.trim());
+  
+  var modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML =
+    '<div class="modal-content">'
+    + '<h2>Сменить имя</h2>'
+    + '<div class="form-group">'
+    + '<input id="newNameInput" type="text" maxlength="20" value="' + current + '" style="font-size:16px;padding:14px">'
+    + '</div>'
+    + '<button class="btn" id="saveNewNameBtn">Сохранить</button>'
+    + '<button class="btn ghost" id="cancelNewNameBtn" style="margin-top:8px">Отмена</button>'
+    + '</div>';
+  document.body.appendChild(modal);
+
+  var inp = modal.querySelector('#newNameInput');
+  inp.focus();
+
+  modal.querySelector('#saveNewNameBtn').onclick = function(){
+    var newName = inp.value.trim();
+    if(newName){
+      saveName(newName);
+    }
+    document.body.removeChild(modal);
+  };
+  
+  modal.querySelector('#cancelNewNameBtn').onclick = function(){
+    document.body.removeChild(modal);
+  };
 };
 
 el('menuAbout').onclick = function(){
