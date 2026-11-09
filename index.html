@@ -102,8 +102,6 @@
   .form-group input, .form-group textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--skeleton);background:#0e131c;color:var(--txt);font-size:14px;font-family:inherit}
   .form-group textarea{resize:vertical;min-height:70px}
   .form-group input:focus, .form-group textarea:focus{outline:none;border-color:var(--acc)}
-  
-  /* Стили для модалки смены имени */
   .modal-overlay{position:fixed;inset:0;background:rgba(11,15,22,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999}
   .modal-content{background:var(--card);padding:24px;border-radius:18px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid var(--border)}
   .modal-content h2{margin-bottom:16px}
@@ -309,6 +307,8 @@ var CONFIG = {
   yieldEarned: 0
 };
 
+var BOT_LINK = "https://t.me/KindCircle_bot";
+
 function el(id){ return document.getElementById(id); }
 function show(id, on){ el(id).classList.toggle('hide', !on); }
 
@@ -375,7 +375,6 @@ document.addEventListener('click', function(){
   if(dropdownOpen){ dropdownOpen = false; el('dropdownMenu').classList.add('hide'); }
 });
 
-// ЗАМЕНА PROMPT НА СВОЕ МОДАЛЬНОЕ ОКНО
 el('menuChangeName').onclick = function(){
   var current = loadName();
   
@@ -415,8 +414,8 @@ el('menuAbout').onclick = function(){
 };
 
 el('menuShare').onclick = function(){
-  var text = 'Поддержи благотворительный фонд KindCircle на TON!';
-  var url = window.location.href;
+  var text = 'Поддержи благотворительный фонд KindCircle на TON! Переходи в бота: ' + BOT_LINK;
+  var url = BOT_LINK;
   var tg = window.Telegram && window.Telegram.WebApp;
   if(tg && tg.openTelegramLink){
     tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text));
@@ -556,8 +555,8 @@ function showSuccessOverlay(amount){
 
   var shareBtn = overlay.querySelector('#shareAfterBtn');
   shareBtn.onclick = function(){
-    var text = 'Я поддержал благотворительный фонд KindCircle на TON. Присоединяйся!';
-    var url = window.location.href;
+    var text = 'Я поддержал благотворительный фонд KindCircle на TON. Присоединяйся к боту: ' + BOT_LINK;
+    var url = BOT_LINK;
     var tg = window.Telegram && window.Telegram.WebApp;
     if(tg && tg.openTelegramLink){
       tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text));
