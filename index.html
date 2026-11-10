@@ -211,8 +211,8 @@
       <h1>Фонд</h1>
       <div class="progress-wrap">
         <div class="progress-label">
-          <span>Цель месяца</span>
-          <span id="progressText">0 / 100 TON</span>
+          <span>Цель фонда</span>
+          <span id="progressText">$0 / $500 000</span>
         </div>
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill"></div>
@@ -285,11 +285,12 @@
 var CONFIG = {
   address: "UQDt7nJmwMEQ1u6NaMmOPicgwkkUPCrQmKdOtbdzBKRzsq-L",
   toncenter: "https://toncenter.com/api/v2",
-  goalTon: 100,
+  apiKey: "df3d70d4426d60961d9d79be8965fe58fde6beb7e4fd2e2896eb65e3921bd759",
+  goalUsd: 500000,
   staked: 0,
   yieldEarned: 0,
   botUrl: "https://t.me/kindcircle_bot",
-  coordinator: "@Szhyfdkrond" // Твой ник для связи
+  coordinator: "@KindCircle_Help"
 };
 
 function el(id){ return document.getElementById(id); }
@@ -502,7 +503,11 @@ document.querySelectorAll('.tab').forEach(function(t){
   };
 });
 
-function tcUrl(path){ return CONFIG.toncenter + path; }
+function tcUrl(path){
+  var u = CONFIG.toncenter + path;
+  var sep = u.indexOf('?') >= 0 ? '&' : '?';
+  return u + sep + 'api_key=' + CONFIG.apiKey;
+}
 
 function fetchTransactions(limit){
   return fetch(tcUrl('/getTransactions?address=' + encodeURIComponent(CONFIG.address) + '&limit=' + limit))
@@ -702,9 +707,11 @@ function loadFundStats(){
       el('statStake').textContent = CONFIG.staked.toFixed(4) + ' TON';
       el('statYield').textContent = CONFIG.yieldEarned.toFixed(4) + ' TON';
 
-      var pct = Math.min(100, (totalIn / CONFIG.goalTon) * 100);
+      // Прогресс-бар теперь считает в долларах
+      var totalInUsd = totalIn * (tonRate || 0);
+      var pct = Math.min(100, (totalInUsd / CONFIG.goalUsd) * 100);
       el('progressFill').style.width = pct + '%';
-      el('progressText').textContent = totalIn.toFixed(1) + ' / ' + CONFIG.goalTon + ' TON';
+      el('progressText').textContent = '$' + totalInUsd.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' / $500 000';
 
       return fetch(tcUrl('/getAddressInformation?address=' + encodeURIComponent(CONFIG.address)))
         .then(function(r){ return r.json(); })
@@ -716,7 +723,6 @@ function loadFundStats(){
     .catch(function(err){ el('statIn').textContent = err.message; });
 }
 
-// НОВАЯ ФУНКЦИЯ ДЛЯ ЗАЯВКИ
 el('applyBtn').onclick = function(){
   var modal = document.createElement('div');
   modal.className = 'modal-overlay';
